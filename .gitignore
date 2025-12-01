@@ -1,0 +1,25 @@
+# Dependencies
+client/node_modules/
+
+# Build outputs
+client/dist/
+
+# Server uploads (don't commit user uploads)
+server/uploads/
+
+# Environment files
+.env
+.env.local
+*.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+server/*.exe
+server/*.exe~
