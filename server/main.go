@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/joho/godotenv"
 	"google.golang.org/genai"
 )
 
@@ -76,6 +77,11 @@ type ErrorResponse struct {
 }
 
 func main() {
+	// Load environment variables from .env file
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using system environment variables")
+	}
+
 	// Create uploads directory if it doesn't exist
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
 		log.Fatalf("Failed to create upload directory: %v", err)
