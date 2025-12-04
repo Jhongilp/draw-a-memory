@@ -37,7 +37,7 @@ export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEdit
 
   const handleApprove = () => {
     const draft: PageDraft = {
-      id: crypto.randomUUID(),
+      id: cluster.draftId || crypto.randomUUID(), // Use server's draft ID if available
       clusterId: cluster.id,
       photoIds: cluster.photoIds || photos.map(p => p.id),
       title,

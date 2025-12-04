@@ -46,18 +46,24 @@ function App() {
       const response = await analyzePhotos(photoIds);
       if (response.clusters && response.clusters.length > 0) {
         // Populate photos on each cluster from photo IDs
-        const clustersWithPhotos = response.clusters.map(cluster => ({
-          ...cluster,
-          photos: cluster.photoIds.map(id => 
-            allPhotos.find(p => p.id === id) || newPhotos.find(p => p.id === id)
-          ).filter(Boolean) as Photo[],
-          suggestedTitle: cluster.title,
-          suggestedDescription: cluster.description,
-          suggestedTheme: cluster.theme,
-          dateRange: cluster.date,
-          ageString: '',
-          status: 'draft' as const,
-        }));
+        // Match clusters with their corresponding drafts from server
+        const clustersWithPhotos = response.clusters.map(cluster => {
+          // Find the draft that corresponds to this cluster
+          const serverDraft = response.drafts?.find(d => d.clusterId === cluster.id);
+          return {
+            ...cluster,
+            draftId: serverDraft?.id, // Store the server's draft ID
+            photos: cluster.photoIds.map(id => 
+              allPhotos.find(p => p.id === id) || newPhotos.find(p => p.id === id)
+            ).filter(Boolean) as Photo[],
+            suggestedTitle: cluster.title,
+            suggestedDescription: cluster.description,
+            suggestedTheme: cluster.theme,
+            dateRange: cluster.date,
+            ageString: '',
+            status: 'draft' as const,
+          };
+        });
         setClusters(clustersWithPhotos);
         setCurrentView('drafts');
       }

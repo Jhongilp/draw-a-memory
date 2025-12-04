@@ -16,6 +16,7 @@ export interface PhotoMetadata {
 
 export interface PhotoCluster {
   id: string;
+  draftId?: string; // Server-created draft ID for this cluster
   photoIds: string[];
   photos?: Photo[]; // Populated on client side
   title: string;
