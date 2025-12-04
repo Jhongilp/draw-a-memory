@@ -1,8 +1,7 @@
 package main
 
 import (
-	"bytes"
-	"encoding/base64"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"google.golang.org/genai"
 )
 
 const (
@@ -442,18 +442,29 @@ func handleDrafts(w http.ResponseWriter, r *http.Request) {
 
 // analyzeAndClusterPhotos uses Gemini AI to analyze photos and create clusters
 func analyzeAndClusterPhotos(photoIds []string, photoPaths []string) ([]PhotoCluster, error) {
+	ctx := context.Background()
+
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
-		// Return mock clusters if no API key
+		log.Println("No GEMINI_API_KEY set, using mock clusters")
 		return createMockClusters(photoIds), nil
 	}
 
-	// Prepare the request to Gemini API
-	var parts []map[string]interface{}
+	// Create Gemini client
+	client, err := genai.NewClient(ctx, &genai.ClientConfig{
+		APIKey:  apiKey,
+		Backend: genai.BackendGeminiAPI,
+	})
+	if err != nil {
+		log.Printf("Failed to create Gemini client: %v", err)
+		return createMockClusters(photoIds), nil
+	}
+
+	// Build the prompt parts
+	var parts []*genai.Part
 
 	// Add instruction text
-	parts = append(parts, map[string]interface{}{
-		"text": `Analyze these baby photos and group them into meaningful clusters based on activity, setting, or moment type. 
+	promptText := `Analyze these baby photos and group them into meaningful clusters based on activity, setting, or moment type. 
 For each cluster, provide:
 - A short, sweet title (e.g., "First Steps", "Bath Time Fun", "Sleepy Moments")
 - A heartfelt description that a parent would love to read (2-3 sentences)
@@ -471,10 +482,12 @@ Respond in this exact JSON format:
   ]
 }
 
-Make sure every photo is included in exactly one cluster.`,
-	})
+Make sure every photo is included in exactly one cluster.`
 
-	// Add images as base64
+	textPart := genai.NewPartFromText(promptText)
+	parts = append(parts, textPart)
+
+	// Add images
 	for _, photoPath := range photoPaths {
 		imageData, err := os.ReadFile(photoPath)
 		if err != nil {
@@ -493,72 +506,48 @@ Make sure every photo is included in exactly one cluster.`,
 			mimeType = "image/webp"
 		}
 
-		parts = append(parts, map[string]interface{}{
-			"inline_data": map[string]string{
-				"mime_type": mimeType,
-				"data":      base64.StdEncoding.EncodeToString(imageData),
-			},
-		})
+		imagePart := genai.NewPartFromBytes(imageData, mimeType)
+		parts = append(parts, imagePart)
 	}
 
-	requestBody := map[string]interface{}{
-		"contents": []map[string]interface{}{
-			{
-				"parts": parts,
-			},
-		},
-		"generationConfig": map[string]interface{}{
-			"temperature":     0.7,
-			"topP":            0.95,
-			"maxOutputTokens": 2048,
-		},
+	// Create the content
+	contents := []*genai.Content{
+		genai.NewContentFromParts(parts, "user"),
 	}
 
-	jsonData, err := json.Marshal(requestBody)
+	// Configure generation
+	config := &genai.GenerateContentConfig{
+		Temperature:     genai.Ptr(float32(0.7)),
+		TopP:            genai.Ptr(float32(0.95)),
+		MaxOutputTokens: 2048,
+	}
+
+	// Generate content using gemini-2.5-flash
+	resp, err := client.Models.GenerateContent(ctx, "gemini-2.5-flash", contents, config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	// Call Gemini API
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=%s", apiKey)
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return nil, fmt.Errorf("API request failed: %v", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %v", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("Gemini API error: %s", string(body))
+		log.Printf("Gemini API error: %v", err)
 		return createMockClusters(photoIds), nil
 	}
 
-	// Parse Gemini response
-	var geminiResp struct {
-		Candidates []struct {
-			Content struct {
-				Parts []struct {
-					Text string `json:"text"`
-				} `json:"parts"`
-			} `json:"content"`
-		} `json:"candidates"`
-	}
-
-	if err := json.Unmarshal(body, &geminiResp); err != nil {
-		log.Printf("Failed to parse Gemini response: %v", err)
+	// Extract text from response
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		log.Println("No response from Gemini")
 		return createMockClusters(photoIds), nil
 	}
 
-	if len(geminiResp.Candidates) == 0 || len(geminiResp.Candidates[0].Content.Parts) == 0 {
+	var responseText string
+	for _, part := range resp.Candidates[0].Content.Parts {
+		if part.Text != "" {
+			responseText += part.Text
+		}
+	}
+
+	if responseText == "" {
+		log.Println("Empty response from Gemini")
 		return createMockClusters(photoIds), nil
 	}
 
-	// Extract JSON from response
-	responseText := geminiResp.Candidates[0].Content.Parts[0].Text
+	log.Printf("Gemini response: %s", responseText)
 
 	// Find JSON in response (it might be wrapped in markdown code blocks)
 	jsonStart := strings.Index(responseText, "{")
