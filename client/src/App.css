@@ -1,3 +1,4 @@
+/* Base styles - Tailwind handles most styling now */
 * {
   box-sizing: border-box;
 }
@@ -7,63 +8,50 @@
   min-height: 100vh;
 }
 
-.app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(135deg, #fdf4ff 0%, #faf5ff 50%, #f5f3ff 100%);
+/* Custom animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.app-header {
-  text-align: center;
-  padding: 48px 24px 32px;
-  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
-  color: white;
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
 }
 
-.app-header h1 {
-  margin: 0;
-  font-size: 2.5rem;
-  font-weight: 700;
+/* Timeline connector for BookView */
+.timeline-connector {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  background: linear-gradient(to bottom, #c4b5fd, #a855f7);
+  height: calc(100% + 32px);
+  top: 0;
+  z-index: 0;
 }
 
-.app-header p {
-  margin: 12px 0 0;
-  font-size: 1.125rem;
-  opacity: 0.9;
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.app-main {
-  flex: 1;
-  padding: 40px 24px;
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
 }
 
-.upload-section {
-  margin-bottom: 48px;
+::-webkit-scrollbar-thumb {
+  background: #c4b5fd;
+  border-radius: 4px;
 }
 
-.gallery-section {
-  margin-top: 24px;
-}
-
-.loading {
-  text-align: center;
-  padding: 48px;
-  color: #6b7280;
-  font-size: 1.125rem;
-}
-
-.app-footer {
-  text-align: center;
-  padding: 24px;
-  color: #6b7280;
-  border-top: 1px solid #e5e7eb;
-  background: white;
-}
-
-.app-footer p {
-  margin: 0;
+::-webkit-scrollbar-thumb:hover {
+  background: #a855f7;
 }
