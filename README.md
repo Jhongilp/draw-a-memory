@@ -97,3 +97,17 @@ draw_a_memory/
 ## License
 
 MIT
+
+
+UPDATES:
+
+- those clusters will be getting updated and visible to the user as it progress
+- Then user can discard unwanted photos
+- By cluster, group similar photos so it's easy for the user to discard photos
+- User can also discard a whole cluster of photos
+
+- Fix: the draft and the final version should be identical
+- allow to add more photos in the cluster to fill spaces
+- Allow to select between different layout templates to arrange the description text.
+
+REMEMBER: the main idea is that the user can easily organize their memories in a really mess amount of photos

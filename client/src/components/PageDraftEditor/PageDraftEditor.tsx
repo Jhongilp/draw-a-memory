@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Edit3, Check, X, Sparkles, Calendar } from 'lucide-react';
-import type { PhotoCluster, PageDraft, Theme } from '../../types/photo';
+import { useState, useMemo } from 'react';
+import { Edit3, Check, X, Sparkles, Calendar, Trash2 } from 'lucide-react';
+import type { PhotoCluster, PageDraft, Theme, Photo } from '../../types/photo';
 import { getPhotoUrl } from '../../api/photoApi';
 
 interface PageDraftEditorProps {
@@ -24,22 +24,163 @@ const themeColors: Record<Theme, { bg: string; accent: string; label: string }> 
 
 const themes: Theme[] = ['adventure', 'cozy', 'celebration', 'nature', 'family', 'milestone', 'playful', 'love', 'growth', 'serene'];
 
+// Dynamic layout component based on number of photos
+function PhotoLayout({ photos, onRemove }: { photos: Photo[]; onRemove: (id: string) => void }) {
+  const count = photos.length;
+
+  if (count === 0) {
+    return (
+      <div className="h-64 flex items-center justify-center bg-gray-100 text-gray-400">
+        No photos selected
+      </div>
+    );
+  }
+
+  if (count === 1) {
+    return (
+      <div className="relative h-80">
+        <PhotoItem photo={photos[0]} onRemove={onRemove} className="w-full h-full" />
+      </div>
+    );
+  }
+
+  if (count === 2) {
+    return (
+      <div className="grid grid-cols-2 gap-1 h-64">
+        {photos.map((photo) => (
+          <PhotoItem key={photo.id} photo={photo} onRemove={onRemove} className="h-full" />
+        ))}
+      </div>
+    );
+  }
+
+  if (count === 3) {
+    return (
+      <div className="grid grid-cols-3 grid-rows-2 gap-1 h-64">
+        <div className="col-span-2 row-span-2">
+          <PhotoItem photo={photos[0]} onRemove={onRemove} className="h-full" />
+        </div>
+        <PhotoItem photo={photos[1]} onRemove={onRemove} className="h-full" />
+        <PhotoItem photo={photos[2]} onRemove={onRemove} className="h-full" />
+      </div>
+    );
+  }
+
+  if (count === 4) {
+    return (
+      <div className="grid grid-cols-2 grid-rows-2 gap-1 h-72">
+        {photos.map((photo) => (
+          <PhotoItem key={photo.id} photo={photo} onRemove={onRemove} className="h-full" />
+        ))}
+      </div>
+    );
+  }
+
+  if (count === 5) {
+    return (
+      <div className="grid grid-cols-6 grid-rows-2 gap-1 h-72">
+        <div className="col-span-3 row-span-2">
+          <PhotoItem photo={photos[0]} onRemove={onRemove} className="h-full" />
+        </div>
+        <div className="col-span-3">
+          <PhotoItem photo={photos[1]} onRemove={onRemove} className="h-full" />
+        </div>
+        {photos.slice(2, 5).map((photo) => (
+          <div key={photo.id} className="col-span-1">
+            <PhotoItem photo={photo} onRemove={onRemove} className="h-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (count === 6) {
+    return (
+      <div className="grid grid-cols-3 grid-rows-2 gap-1 h-72">
+        {photos.map((photo) => (
+          <PhotoItem key={photo.id} photo={photo} onRemove={onRemove} className="h-full" />
+        ))}
+      </div>
+    );
+  }
+
+  // 7+ photos: masonry-like grid
+  return (
+    <div className="grid grid-cols-4 gap-1 auto-rows-[120px]">
+      {photos.map((photo, idx) => {
+        // Make first photo larger
+        const isLarge = idx === 0;
+        return (
+          <div key={photo.id} className={isLarge ? 'col-span-2 row-span-2' : ''}>
+            <PhotoItem photo={photo} onRemove={onRemove} className="h-full" />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PhotoItem({ 
+  photo, 
+  onRemove, 
+  className = '' 
+}: { 
+  photo: Photo; 
+  onRemove: (id: string) => void; 
+  className?: string;
+}) {
+  return (
+    <div className={`relative group ${className}`}>
+      <img
+        src={getPhotoUrl(photo.path)}
+        alt=""
+        className="w-full h-full object-cover"
+      />
+      <button
+        onClick={() => onRemove(photo.id)}
+        className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+        title="Remove photo"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
 export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEditorProps) {
   const [title, setTitle] = useState(cluster.suggestedTitle || cluster.title);
   const [description, setDescription] = useState(cluster.suggestedDescription || cluster.description);
   const [theme, setTheme] = useState<Theme>(cluster.suggestedTheme || cluster.theme || 'family');
   const [isEditing, setIsEditing] = useState(false);
+  const [discardedPhotoIds, setDiscardedPhotoIds] = useState<Set<string>>(new Set());
 
   const themeStyle = themeColors[theme] || themeColors.family;
-  const photos = cluster.photos || [];
+  const allPhotos = cluster.photos || [];
+  
+  // Filter out discarded photos
+  const photos = useMemo(() => 
+    allPhotos.filter(p => !discardedPhotoIds.has(p.id)), 
+    [allPhotos, discardedPhotoIds]
+  );
+  
   const dateDisplay = cluster.dateRange || cluster.date || '';
   const ageDisplay = cluster.ageString || '';
 
+  const handleRemovePhoto = (photoId: string) => {
+    setDiscardedPhotoIds(prev => new Set([...prev, photoId]));
+  };
+
+  const handleRestoreAll = () => {
+    setDiscardedPhotoIds(new Set());
+  };
+
   const handleApprove = () => {
+    if (photos.length === 0) return;
+    
     const draft: PageDraft = {
       id: cluster.draftId || crypto.randomUUID(), // Use server's draft ID if available
       clusterId: cluster.id,
-      photoIds: cluster.photoIds || photos.map(p => p.id),
+      photoIds: photos.map(p => p.id), // Use only the non-discarded photos
       title,
       description,
       theme,
@@ -53,26 +194,18 @@ export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEdit
     onApprove(draft);
   };
 
+  const discardedCount = discardedPhotoIds.size;
+
   return (
     <div className={`rounded-3xl overflow-hidden shadow-xl ${themeStyle.bg} border border-white/50`}>
-      {/* Header with photos preview */}
-      <div className="relative h-64">
-        <div className="absolute inset-0 grid grid-cols-3 gap-1">
-          {photos.slice(0, 3).map((photo, idx) => (
-            <div key={photo.id} className={`relative ${idx === 0 ? 'col-span-2 row-span-2' : ''}`}>
-              <img
-                src={getPhotoUrl(photo.path)}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ))}
-        </div>
-        <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
+      {/* Dynamic photo layout */}
+      <div className="relative">
+        <PhotoLayout photos={photos} onRemove={handleRemovePhoto} />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
         
         {/* Age badge */}
         {ageDisplay && (
-          <div className="absolute top-4 left-4">
+          <div className="absolute top-4 left-4 z-10">
             <span className="px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full text-sm font-medium text-gray-700 shadow-lg">
               {ageDisplay}
             </span>
@@ -80,8 +213,8 @@ export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEdit
         )}
 
         {/* AI badge */}
-        <div className="absolute top-4 right-4">
-          <span className="px-3 py-1.5 bg-linear-to-r from-pink-500 to-purple-500 text-white rounded-full text-sm font-medium flex items-center gap-1.5 shadow-lg">
+        <div className="absolute top-4 right-4 z-10">
+          <span className="px-3 py-1.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-full text-sm font-medium flex items-center gap-1.5 shadow-lg">
             <Sparkles className="w-4 h-4" />
             AI Draft
           </span>
@@ -89,11 +222,18 @@ export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEdit
 
         {/* Date overlay */}
         {dateDisplay && (
-          <div className="absolute bottom-4 left-4 flex items-center gap-2 text-white">
+          <div className="absolute bottom-4 left-4 flex items-center gap-2 text-white z-10">
             <Calendar className="w-4 h-4" />
             <span className="text-sm font-medium">{dateDisplay}</span>
           </div>
         )}
+
+        {/* Hover hint */}
+        <div className="absolute bottom-4 right-4 z-10">
+          <span className="px-2 py-1 bg-black/50 backdrop-blur-sm text-white/80 rounded text-xs">
+            Hover to remove photos
+          </span>
+        </div>
       </div>
 
       {/* Content */}
@@ -158,13 +298,21 @@ export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEdit
             
             <p className="text-gray-600 leading-relaxed mb-4">{description}</p>
             
-            <div className="flex items-center gap-2 mb-6">
+            <div className="flex items-center flex-wrap gap-2 mb-6">
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${themeStyle.bg} ${themeStyle.accent}`}>
                 {themeStyle.label}
               </span>
               <span className="text-sm text-gray-500">
                 {photos.length} photo{photos.length !== 1 ? 's' : ''}
               </span>
+              {discardedCount > 0 && (
+                <button
+                  onClick={handleRestoreAll}
+                  className="text-sm text-pink-500 hover:text-pink-600 underline"
+                >
+                  Restore {discardedCount} removed
+                </button>
+              )}
             </div>
 
             {/* Action buttons */}
@@ -178,7 +326,8 @@ export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEdit
               </button>
               <button
                 onClick={handleApprove}
-                className="flex-1 py-3 px-4 bg-linear-to-r from-pink-500 to-purple-500 text-white rounded-xl hover:from-pink-600 hover:to-purple-600 transition-all font-medium flex items-center justify-center gap-2 shadow-lg shadow-pink-500/25"
+                disabled={photos.length === 0}
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl hover:from-pink-600 hover:to-purple-600 transition-all font-medium flex items-center justify-center gap-2 shadow-lg shadow-pink-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-pink-500 disabled:hover:to-purple-500"
               >
                 <Check className="w-5 h-5" />
                 Add to Book
