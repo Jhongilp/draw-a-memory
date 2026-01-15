@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Baby, Upload, BookOpen, Sparkles, Loader2 } from 'lucide-react';
 import { PhotoUpload } from './components/PhotoUpload';
 import { PageDraftEditor } from './components/PageDraftEditor';
-import { BookView } from './components/BookView';
+import { BookLayout } from './components/BookLayout';
+import { BookOverview } from './components/BookOverview';
+import { SinglePageView } from './components/SinglePageView';
 import type { Photo, PhotoCluster, PageDraft, Theme } from './types/photo';
 import { getPhotos, analyzePhotos, getPages, savePageDraft } from './api/photoApi';
 
-type View = 'upload' | 'drafts' | 'book';
-
-function App() {
-  const [currentView, setCurrentView] = useState<View>('upload');
+function AppContent() {
+  const location = useLocation();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [clusters, setClusters] = useState<PhotoCluster[]>([]);
   const [pages, setPages] = useState<PageDraft[]>([]);
@@ -39,20 +40,17 @@ function App() {
     const allPhotos = [...newPhotos, ...photos];
     setPhotos(allPhotos);
     
-    // Automatically analyze the uploaded photos
     setIsAnalyzing(true);
     try {
       const photoIds = newPhotos.map((p) => p.id);
       const response = await analyzePhotos(photoIds);
       if (response.clusters && response.clusters.length > 0) {
-        // Populate photos on each cluster from photo IDs
-        // Match clusters with their corresponding drafts from server
         const clustersWithPhotos = response.clusters.map(cluster => {
-          // Find the draft that corresponds to this cluster
           const serverDraft = response.drafts?.find(d => d.clusterId === cluster.id);
           return {
             ...cluster,
-            draftId: serverDraft?.id, // Store the server's draft ID
+            draftId: serverDraft?.id,
+            backgroundPath: serverDraft?.backgroundPath || cluster.backgroundPath,
             photos: cluster.photoIds.map(id => 
               allPhotos.find(p => p.id === id) || newPhotos.find(p => p.id === id)
             ).filter(Boolean) as Photo[],
@@ -65,11 +63,9 @@ function App() {
           };
         });
         setClusters(clustersWithPhotos);
-        setCurrentView('drafts');
       }
     } catch (error) {
       console.error('Failed to analyze photos:', error);
-      // Create a mock cluster for demo purposes
       const mockCluster: PhotoCluster = {
         id: crypto.randomUUID(),
         photoIds: newPhotos.map(p => p.id),
@@ -86,7 +82,6 @@ function App() {
         status: 'draft',
       };
       setClusters([mockCluster]);
-      setCurrentView('drafts');
     } finally {
       setIsAnalyzing(false);
     }
@@ -100,31 +95,33 @@ function App() {
     }
     setPages((prev) => [...prev, draft]);
     setClusters((prev) => prev.filter((c) => c.id !== draft.clusterId));
-    
-    if (clusters.length <= 1) {
-      setCurrentView('book');
-    }
   };
 
   const handleDiscardDraft = (clusterId: string) => {
     setClusters((prev) => prev.filter((c) => c.id !== clusterId));
-    if (clusters.length <= 1) {
-      setCurrentView('upload');
-    }
   };
 
+  const handleReorderPages = (reorderedPages: PageDraft[]) => {
+    setPages(reorderedPages);
+    // TODO: Persist order to server
+  };
+
+  const isUploadView = location.pathname === '/' || location.pathname === '/upload';
+  const isDraftsView = location.pathname === '/drafts';
+  const isBookView = location.pathname.startsWith('/book');
+
   return (
-    <div className="min-h-screen bg-linear-to-br from-pink-50 via-purple-50 to-blue-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-pink-100 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4">
+        <div className="max-w-full px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-linear-to-br from-pink-400 to-purple-500 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center">
                 <Baby className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold bg-linear-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
                   BabySteps AI Journal
                 </h1>
                 <p className="text-xs text-gray-500">Turn photos into magical memories</p>
@@ -133,126 +130,158 @@ function App() {
 
             {/* Navigation */}
             <nav className="flex gap-2">
-              <button
-                onClick={() => setCurrentView('upload')}
+              <Link
+                to="/"
                 className={`px-4 py-2 rounded-xl font-medium text-sm flex items-center gap-2 transition-all
-                  ${currentView === 'upload' 
-                    ? 'bg-linear-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/25' 
+                  ${isUploadView 
+                    ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/25' 
                     : 'text-gray-600 hover:bg-pink-50'
                   }`}
               >
                 <Upload className="w-4 h-4" />
                 Upload
-              </button>
+              </Link>
               {clusters.length > 0 && (
-                <button
-                  onClick={() => setCurrentView('drafts')}
+                <Link
+                  to="/drafts"
                   className={`px-4 py-2 rounded-xl font-medium text-sm flex items-center gap-2 transition-all
-                    ${currentView === 'drafts' 
-                      ? 'bg-linear-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/25' 
+                    ${isDraftsView 
+                      ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/25' 
                       : 'text-gray-600 hover:bg-pink-50'
                     }`}
                 >
                   <Sparkles className="w-4 h-4" />
                   Drafts
                   <span className="bg-white/20 px-1.5 py-0.5 rounded-full text-xs">{clusters.length}</span>
-                </button>
+                </Link>
               )}
-              <button
-                onClick={() => setCurrentView('book')}
+              <Link
+                to="/book"
                 className={`px-4 py-2 rounded-xl font-medium text-sm flex items-center gap-2 transition-all
-                  ${currentView === 'book' 
-                    ? 'bg-linear-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/25' 
+                  ${isBookView 
+                    ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/25' 
                     : 'text-gray-600 hover:bg-pink-50'
                   }`}
               >
                 <BookOpen className="w-4 h-4" />
                 My Book
                 {pages.length > 0 && (
-                  <span className={`px-1.5 py-0.5 rounded-full text-xs ${currentView === 'book' ? 'bg-white/20' : 'bg-pink-100 text-pink-600'}`}>
+                  <span className={`px-1.5 py-0.5 rounded-full text-xs ${isBookView ? 'bg-white/20' : 'bg-pink-100 text-pink-600'}`}>
                     {pages.length}
                   </span>
                 )}
-              </button>
+              </Link>
             </nav>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-10">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-pink-500 animate-spin" />
-          </div>
-        ) : (
-          <>
-            {/* Upload View */}
-            {currentView === 'upload' && (
-              <div className="max-w-2xl mx-auto">
-                <div className="text-center mb-10">
-                  <h2 className="text-3xl font-bold text-gray-800 mb-3">
-                    Add New Memories
-                  </h2>
-                  <p className="text-gray-500">
-                    Upload photos and let AI create beautiful memory book pages
-                  </p>
-                </div>
-                
-                {isAnalyzing ? (
-                  <div className="text-center py-16 bg-white rounded-3xl shadow-xl">
-                    <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-linear-to-br from-pink-100 to-purple-100 flex items-center justify-center">
-                      <Sparkles className="w-10 h-10 text-pink-500 animate-pulse" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                      Creating Magic...
-                    </h3>
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-pink-500 animate-spin" />
+        </div>
+      ) : (
+        <Routes>
+          {/* Upload View */}
+          <Route
+            path="/"
+            element={
+              <main className="flex-1 flex items-center justify-center p-10">
+                <div className="max-w-2xl w-full">
+                  <div className="text-center mb-10">
+                    <h2 className="text-3xl font-bold text-gray-800 mb-3">
+                      Add New Memories
+                    </h2>
                     <p className="text-gray-500">
-                      AI is analyzing your photos and crafting the perfect memory
+                      Upload photos and let AI create beautiful memory book pages
                     </p>
                   </div>
-                ) : (
-                  <PhotoUpload onUploadComplete={handleUploadComplete} />
-                )}
-              </div>
-            )}
-
-            {/* Drafts View */}
-            {currentView === 'drafts' && (
-              <div className="max-w-xl mx-auto space-y-8">
-                <div className="text-center mb-10">
-                  <h2 className="text-3xl font-bold text-gray-800 mb-3">
-                    Review Your Drafts
-                  </h2>
-                  <p className="text-gray-500">
-                    Edit the AI suggestions and add them to your memory book
-                  </p>
+                  
+                  {isAnalyzing ? (
+                    <div className="text-center py-16 bg-white rounded-3xl shadow-xl">
+                      <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center">
+                        <Sparkles className="w-10 h-10 text-pink-500 animate-pulse" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                        Creating Magic...
+                      </h3>
+                      <p className="text-gray-500">
+                        AI is analyzing your photos and crafting the perfect memory
+                      </p>
+                    </div>
+                  ) : (
+                    <PhotoUpload onUploadComplete={handleUploadComplete} />
+                  )}
                 </div>
-                
-                {clusters.map((cluster) => (
-                  <PageDraftEditor
-                    key={cluster.id}
-                    cluster={cluster}
-                    onApprove={handleApproveDraft}
-                    onDiscard={() => handleDiscardDraft(cluster.id)}
-                  />
-                ))}
-              </div>
-            )}
+              </main>
+            }
+          />
 
-            {/* Book View */}
-            {currentView === 'book' && (
-              <BookView pages={pages} />
-            )}
-          </>
-        )}
-      </main>
+          {/* Drafts View */}
+          <Route
+            path="/drafts"
+            element={
+              <main className="flex-1 overflow-auto p-10">
+                <div className="max-w-xl mx-auto space-y-8">
+                  <div className="text-center mb-10">
+                    <h2 className="text-3xl font-bold text-gray-800 mb-3">
+                      Review Your Drafts
+                    </h2>
+                    <p className="text-gray-500">
+                      Edit the AI suggestions and add them to your memory book
+                    </p>
+                  </div>
+                  
+                  {clusters.length === 0 ? (
+                    <div className="text-center py-16">
+                      <Sparkles className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p className="text-gray-500">No drafts to review</p>
+                      <Link to="/" className="text-pink-500 hover:text-pink-600 underline text-sm mt-2 inline-block">
+                        Upload some photos
+                      </Link>
+                    </div>
+                  ) : (
+                    clusters.map((cluster) => (
+                      <PageDraftEditor
+                        key={cluster.id}
+                        cluster={cluster}
+                        onApprove={handleApproveDraft}
+                        onDiscard={() => handleDiscardDraft(cluster.id)}
+                      />
+                    ))
+                  )}
+                </div>
+              </main>
+            }
+          />
 
-      {/* Footer */}
-      <footer className="text-center py-8 text-gray-400 text-sm">
-        Made with 💕 for your little ones
-      </footer>
+          {/* Book View with Sidebar */}
+          <Route
+            path="/book"
+            element={<BookLayout pages={pages} onReorderPages={handleReorderPages} />}
+          >
+            <Route index element={<BookOverview pages={pages} />} />
+            <Route path="page/:pageId" element={<SinglePageView pages={pages} />} />
+          </Route>
+        </Routes>
+      )}
+
+      {/* Footer - only show on non-book views */}
+      {!isBookView && (
+        <footer className="text-center py-8 text-gray-400 text-sm">
+          Made with 💕 for your little ones
+        </footer>
+      )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   );
 }
 

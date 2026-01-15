@@ -1,0 +1,1 @@
+export { SinglePageView } from './SinglePageView';
