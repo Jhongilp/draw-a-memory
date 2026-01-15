@@ -187,6 +187,7 @@ export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEdit
       photos: photos,
       dateRange: dateDisplay,
       ageString: ageDisplay,
+      backgroundPath: cluster.backgroundPath,
       status: 'approved',
       createdAt: new Date().toISOString(),
       approvedAt: new Date().toISOString(),
@@ -195,12 +196,28 @@ export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEdit
   };
 
   const discardedCount = discardedPhotoIds.size;
+  const backgroundUrl = cluster.backgroundPath ? getPhotoUrl(cluster.backgroundPath) : null;
 
   return (
-    <div className={`rounded-3xl overflow-hidden shadow-xl ${themeStyle.bg} border border-white/50`}>
-      {/* Dynamic photo layout */}
-      <div className="relative">
-        <PhotoLayout photos={photos} onRemove={handleRemovePhoto} />
+    <div className="rounded-3xl overflow-hidden shadow-xl border border-white/50 relative">
+      {/* Background image with overlay */}
+      {backgroundUrl ? (
+        <>
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${backgroundUrl})` }}
+          />
+          <div className="absolute inset-0 bg-white/70" />
+        </>
+      ) : (
+        <div className={`absolute inset-0 ${themeStyle.bg}`} />
+      )}
+
+      {/* Content wrapper (above background) */}
+      <div className="relative z-10">
+        {/* Dynamic photo layout */}
+        <div className="relative">
+          <PhotoLayout photos={photos} onRemove={handleRemovePhoto} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
         
         {/* Age badge */}
@@ -335,6 +352,7 @@ export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEdit
             </div>
           </>
         )}
+      </div>
       </div>
     </div>
   );

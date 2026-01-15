@@ -106,6 +106,7 @@ UPDATES:
 - By cluster, group similar photos so it's easy for the user to discard photos
 - User can also discard a whole cluster of photos
 
+- Fix: change AI agent to be a loving mom instead of a story teller
 - Fix: the draft and the final version should be identical
 - allow to add more photos in the cluster to fill spaces
 - Allow to select between different layout templates to arrange the description text.

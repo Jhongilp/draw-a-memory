@@ -13,24 +13,26 @@ type Photo struct {
 
 // PhotoCluster represents a group of related photos
 type PhotoCluster struct {
-	ID          string   `json:"id"`
-	PhotoIds    []string `json:"photoIds"`
-	Theme       string   `json:"theme"`
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	Date        string   `json:"date"`
+	ID             string   `json:"id"`
+	PhotoIds       []string `json:"photoIds"`
+	Theme          string   `json:"theme"`
+	Title          string   `json:"title"`
+	Description    string   `json:"description"`
+	Date           string   `json:"date"`
+	BackgroundPath string   `json:"backgroundPath,omitempty"`
 }
 
 // PageDraft represents a draft page for the memory book
 type PageDraft struct {
-	ID          string   `json:"id"`
-	ClusterID   string   `json:"clusterId"`
-	PhotoIds    []string `json:"photoIds"`
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	Theme       string   `json:"theme"`
-	Status      string   `json:"status"` // "draft" | "approved" | "rejected"
-	CreatedAt   string   `json:"createdAt"`
+	ID             string   `json:"id"`
+	ClusterID      string   `json:"clusterId"`
+	PhotoIds       []string `json:"photoIds"`
+	Title          string   `json:"title"`
+	Description    string   `json:"description"`
+	Theme          string   `json:"theme"`
+	BackgroundPath string   `json:"backgroundPath,omitempty"`
+	Status         string   `json:"status"` // "draft" | "approved" | "rejected"
+	CreatedAt      string   `json:"createdAt"`
 }
 
 // ClusterRequest is the request body for clustering photos

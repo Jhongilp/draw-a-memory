@@ -214,18 +214,28 @@ func HandleClusterPhotos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create drafts from clusters
+	// Generate background images for each cluster and create drafts
 	var pageDrafts []PageDraft
-	for _, cluster := range clusters {
+	for i, cluster := range clusters {
+		// Generate themed background image
+		backgroundPath, err := GenerateBackgroundImage(cluster.Theme, cluster.Title, cluster.Description)
+		if err != nil {
+			log.Printf("Failed to generate background for cluster %s: %v", cluster.ID, err)
+			// Continue without background - it's optional
+		} else {
+			clusters[i].BackgroundPath = backgroundPath
+		}
+
 		draft := PageDraft{
-			ID:          uuid.New().String(),
-			ClusterID:   cluster.ID,
-			PhotoIds:    cluster.PhotoIds,
-			Title:       cluster.Title,
-			Description: cluster.Description,
-			Theme:       cluster.Theme,
-			Status:      "draft",
-			CreatedAt:   time.Now().Format(time.RFC3339),
+			ID:             uuid.New().String(),
+			ClusterID:      cluster.ID,
+			PhotoIds:       cluster.PhotoIds,
+			Title:          cluster.Title,
+			Description:    cluster.Description,
+			Theme:          cluster.Theme,
+			BackgroundPath: backgroundPath,
+			Status:         "draft",
+			CreatedAt:      time.Now().Format(time.RFC3339),
 		}
 		drafts[draft.ID] = draft
 		pageDrafts = append(pageDrafts, draft)

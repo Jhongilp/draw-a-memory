@@ -28,6 +28,7 @@ export interface PhotoCluster {
   suggestedTheme?: Theme;
   dateRange?: string;
   ageString?: string;
+  backgroundPath?: string;
   status?: 'draft' | 'approved';
 }
 
@@ -41,6 +42,7 @@ export interface PageDraft {
   photos?: Photo[]; // Populated on client side
   dateRange?: string;
   ageString?: string;
+  backgroundPath?: string;
   status: 'draft' | 'approved' | 'rejected';
   createdAt: string;
   approvedAt?: string;

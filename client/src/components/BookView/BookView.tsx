@@ -73,35 +73,56 @@ export function BookView({ pages }: BookViewProps) {
                 )}
 
                 {/* Page card */}
-                <div className={`${themeStyle.bg} ${themeStyle.border} border-2 rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow`}>
-                  {/* Photo grid */}
-                  {photos.length > 0 && (
-                    <div className="grid grid-cols-4 gap-1 p-1">
-                      {photos.slice(0, 4).map((photo, idx) => (
-                        <div 
-                          key={photo.id} 
-                          className={`aspect-square overflow-hidden rounded-lg ${idx === 0 ? 'col-span-2 row-span-2' : ''}`}
-                        >
-                          <img
-                            src={getPhotoUrl(photo.path)}
-                            alt=""
-                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                          />
-                        </div>
-                      ))}
-                    </div>
+                <div 
+                  className={`${themeStyle.border} border-2 rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow relative`}
+                >
+                  {/* Background image with overlay */}
+                  {page.backgroundPath ? (
+                    <>
+                      <div 
+                        className="absolute inset-0 bg-cover bg-center"
+                        style={{ 
+                          backgroundImage: `url(${getPhotoUrl(page.backgroundPath)})`,
+                        }}
+                      />
+                      {/* Semi-transparent overlay for readability */}
+                      <div className="absolute inset-0 bg-white/70" />
+                    </>
+                  ) : (
+                    <div className={`absolute inset-0 ${themeStyle.bg}`} />
                   )}
 
-                  {/* Content */}
-                  <div className="p-6">
-                    {dateDisplay && (
-                      <div className="flex items-center gap-2 mb-2">
-                        <Calendar className={`w-4 h-4 ${themeStyle.accent}`} />
-                        <span className="text-sm text-gray-500">{dateDisplay}</span>
+                  {/* Content wrapper (above background) */}
+                  <div className="relative z-10">
+                    {/* Photo grid */}
+                    {photos.length > 0 && (
+                      <div className="grid grid-cols-4 gap-1 p-1">
+                        {photos.slice(0, 4).map((photo, idx) => (
+                          <div 
+                            key={photo.id} 
+                            className={`aspect-square overflow-hidden rounded-lg ${idx === 0 ? 'col-span-2 row-span-2' : ''}`}
+                          >
+                            <img
+                              src={getPhotoUrl(photo.path)}
+                              alt=""
+                              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                            />
+                          </div>
+                        ))}
                       </div>
                     )}
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">{page.title}</h3>
-                    <p className="text-gray-600 leading-relaxed">{page.description}</p>
+
+                    {/* Content */}
+                    <div className="p-6">
+                      {dateDisplay && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <Calendar className={`w-4 h-4 ${themeStyle.accent}`} />
+                          <span className="text-sm text-gray-500">{dateDisplay}</span>
+                        </div>
+                      )}
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">{page.title}</h3>
+                      <p className="text-gray-600 leading-relaxed">{page.description}</p>
+                    </div>
                   </div>
                 </div>
               </div>
