@@ -78,6 +78,7 @@ export async function getPages(): Promise<PageDraft[]> {
   return drafts.filter(d => d.status === 'approved');
 }
 
-export function getPhotoUrl(path: string): string {
-  return `http://localhost:8080${path}`;
+export function getPhotoUrl(path: string, thumb: boolean = true): string {
+  const baseUrl = `http://localhost:8080${path}`;
+  return thumb ? `${baseUrl}?thumb=1` : baseUrl;
 }

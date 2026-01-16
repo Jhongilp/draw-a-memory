@@ -3,6 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	_ "image/gif"
+	"image/jpeg"
+	_ "image/png"
 	"io"
 	"log"
 	"net/http"
@@ -11,8 +14,39 @@ import (
 	"strings"
 	"time"
 
+	"github.com/disintegration/imaging"
 	"github.com/google/uuid"
 )
+
+const (
+	thumbWidth  = 800 // Width for thumbnails used in page view
+	thumbHeight = 600 // Max height for thumbnails
+)
+
+// generateThumbnail creates a resized version of an image
+func generateThumbnail(srcPath, dstPath string) error {
+	src, err := imaging.Open(srcPath)
+	if err != nil {
+		return fmt.Errorf("failed to open image: %w", err)
+	}
+
+	// Resize to fit within bounds while maintaining aspect ratio
+	thumb := imaging.Fit(src, thumbWidth, thumbHeight, imaging.Lanczos)
+
+	// Save as JPEG with good quality (smaller file size)
+	out, err := os.Create(dstPath)
+	if err != nil {
+		return fmt.Errorf("failed to create thumbnail file: %w", err)
+	}
+	defer out.Close()
+
+	// Encode as JPEG with 85% quality - good balance of size and quality
+	if err := jpeg.Encode(out, thumb, &jpeg.Options{Quality: 85}); err != nil {
+		return fmt.Errorf("failed to encode thumbnail: %w", err)
+	}
+
+	return nil
+}
 
 // HandleUpload handles photo upload requests
 func HandleUpload(w http.ResponseWriter, r *http.Request) {
@@ -81,6 +115,16 @@ func HandleUpload(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error saving file %s: %v", filePath, err)
 			os.Remove(filePath)
 			continue
+		}
+
+		// Generate thumbnail for faster loading
+		thumbFilename := photoID + "_thumb.jpg"
+		thumbPath := filepath.Join(uploadDir, thumbFilename)
+		if err := generateThumbnail(filePath, thumbPath); err != nil {
+			log.Printf("Warning: failed to generate thumbnail for %s: %v", photoID, err)
+			// Continue without thumbnail - original will be used
+		} else {
+			log.Printf("Generated thumbnail: %s", thumbFilename)
 		}
 
 		photo := Photo{
@@ -154,16 +198,37 @@ func HandleGetPhotos(w http.ResponseWriter, r *http.Request) {
 	SendJSON(w, photos)
 }
 
-// HandleServePhoto serves photo files
+// HandleServePhoto serves photo files with caching headers
+// Supports ?thumb=1 query param to serve thumbnail version
 func HandleServePhoto(w http.ResponseWriter, r *http.Request) {
 	filename := strings.TrimPrefix(r.URL.Path, "/uploads/")
-	filePath := filepath.Join(uploadDir, filename)
 
 	// Security: prevent directory traversal
 	if strings.Contains(filename, "..") {
 		SendError(w, "Invalid path", http.StatusBadRequest)
 		return
 	}
+
+	// Check if thumbnail is requested
+	useThumb := r.URL.Query().Get("thumb") == "1"
+
+	filePath := filepath.Join(uploadDir, filename)
+
+	if useThumb {
+		// Try to serve thumbnail version
+		ext := filepath.Ext(filename)
+		baseName := strings.TrimSuffix(filename, ext)
+		// Skip if already a thumbnail
+		if !strings.HasSuffix(baseName, "_thumb") {
+			thumbPath := filepath.Join(uploadDir, baseName+"_thumb.jpg")
+			if _, err := os.Stat(thumbPath); err == nil {
+				filePath = thumbPath
+			}
+		}
+	}
+
+	// Set caching headers - photos are immutable (UUID-based names)
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 
 	http.ServeFile(w, r, filePath)
 }
