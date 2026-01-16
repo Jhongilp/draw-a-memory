@@ -88,11 +88,11 @@ export function SinglePageView({ pages }: SinglePageViewProps) {
       </div>
 
       {/* Page content */}
-      <div className="flex-1 overflow-auto p-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Page card */}
+      <div className="flex-1 overflow-auto p-8 flex items-center justify-center">
+        <div className="w-full max-w-5xl">
+          {/* Page card with fixed 16:9 aspect ratio */}
           <div 
-            className={`${themeStyle.border} border-2 rounded-3xl overflow-hidden shadow-xl relative`}
+            className={`${themeStyle.border} border-2 rounded-3xl overflow-hidden shadow-xl relative aspect-video`}
           >
             {/* Background image with overlay */}
             {page.backgroundPath ? (
@@ -107,22 +107,22 @@ export function SinglePageView({ pages }: SinglePageViewProps) {
               <div className={`absolute inset-0 ${themeStyle.bg}`} />
             )}
 
-            {/* Content wrapper */}
-            <div className="relative z-10">
-              {/* Photo grid */}
-              {photos.length > 0 && (
-                <div className="p-4">
-                  <div className={`grid gap-3 ${
-                    photos.length === 1 ? 'grid-cols-1' :
-                    photos.length === 2 ? 'grid-cols-2' :
-                    photos.length <= 4 ? 'grid-cols-2' :
-                    'grid-cols-3'
+            {/* Content wrapper - absolute positioning to fill the fixed aspect ratio container */}
+            <div className="absolute inset-0 z-10 flex">
+              {/* Photo section - takes left portion */}
+              <div className="flex-1 p-4 flex items-center justify-center">
+                {photos.length > 0 ? (
+                  <div className={`w-full h-full grid gap-2 ${
+                    photos.length === 1 ? 'grid-cols-1 grid-rows-1' :
+                    photos.length === 2 ? 'grid-cols-2 grid-rows-1' :
+                    photos.length <= 4 ? 'grid-cols-2 grid-rows-2' :
+                    'grid-cols-3 grid-rows-2'
                   }`}>
                     {photos.map((photo, idx) => (
                       <div 
                         key={photo.id} 
                         className={`overflow-hidden rounded-2xl shadow-lg ${
-                          photos.length === 3 && idx === 0 ? 'col-span-2 row-span-2' : ''
+                          photos.length === 3 && idx === 0 ? 'col-span-1 row-span-2' : ''
                         } ${
                           photos.length >= 5 && idx === 0 ? 'col-span-2 row-span-2' : ''
                         }`}
@@ -130,34 +130,38 @@ export function SinglePageView({ pages }: SinglePageViewProps) {
                         <img
                           src={getPhotoUrl(photo.path)}
                           alt=""
-                          className="w-full h-full object-cover aspect-square hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                         />
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    <span className="text-lg">No photos</span>
+                  </div>
+                )}
+              </div>
 
-              {/* Text content */}
-              <div className="p-8">
+              {/* Text content - takes right portion */}
+              <div className="w-80 p-6 flex flex-col justify-center bg-white/40 backdrop-blur-sm">
                 {/* Age badge */}
                 {ageDisplay && (
-                  <div className="inline-block mb-4">
-                    <span className="px-4 py-1.5 bg-white/80 backdrop-blur-sm rounded-full text-sm font-semibold text-pink-600 shadow-sm">
+                  <div className="mb-3">
+                    <span className="px-3 py-1 bg-white/80 backdrop-blur-sm rounded-full text-sm font-semibold text-pink-600 shadow-sm">
                       {ageDisplay}
                     </span>
                   </div>
                 )}
 
                 {dateDisplay && (
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-2">
                     <Calendar className={`w-4 h-4 ${themeStyle.accent}`} />
                     <span className="text-sm text-gray-500">{dateDisplay}</span>
                   </div>
                 )}
 
-                <h2 className="text-3xl font-bold text-gray-800 mb-4">{page.title}</h2>
-                <p className="text-lg text-gray-600 leading-relaxed">{page.description}</p>
+                <h2 className="text-2xl font-bold text-gray-800 mb-3 line-clamp-2">{page.title}</h2>
+                <p className="text-base text-gray-600 leading-relaxed line-clamp-6">{page.description}</p>
               </div>
             </div>
           </div>
