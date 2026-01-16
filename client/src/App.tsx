@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { SignedIn, SignedOut, UserButton } from '@clerk/clerk-react';
 import { Baby, Upload, BookOpen, Sparkles, Loader2 } from 'lucide-react';
 import { PhotoUpload } from './components/PhotoUpload';
 import { PageDraftEditor } from './components/PageDraftEditor';
 import { BookLayout } from './components/BookLayout';
 import { BookOverview } from './components/BookOverview';
 import { SinglePageView } from './components/SinglePageView';
+import { SignInPage } from './components/SignInPage';
+import { SignUpPage } from './components/SignUpPage';
+import { LandingPage } from './components/LandingPage';
 import type { Photo, PhotoCluster, PageDraft, Theme } from './types/photo';
 import { getPhotos, analyzePhotos, getPages, savePageDraft } from './api/photoApi';
 
@@ -171,6 +175,18 @@ function AppContent() {
                   </span>
                 )}
               </Link>
+              
+              {/* User Button */}
+              <div className="ml-4 pl-4 border-l border-pink-200">
+                <UserButton 
+                  afterSignOutUrl="/"
+                  appearance={{
+                    elements: {
+                      avatarBox: 'w-9 h-9',
+                    },
+                  }}
+                />
+              </div>
             </nav>
           </div>
         </div>
@@ -280,7 +296,65 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
-      <AppContent />
+      <Routes>
+        {/* Public routes */}
+        <Route
+          path="/"
+          element={
+            <>
+              <SignedIn>
+                <Navigate to="/upload" replace />
+              </SignedIn>
+              <SignedOut>
+                <LandingPage />
+              </SignedOut>
+            </>
+          }
+        />
+        <Route path="/sign-in/*" element={<SignInPage />} />
+        <Route path="/sign-up/*" element={<SignUpPage />} />
+
+        {/* Protected routes */}
+        <Route
+          path="/upload"
+          element={
+            <>
+              <SignedIn>
+                <AppContent />
+              </SignedIn>
+              <SignedOut>
+                <Navigate to="/" replace />
+              </SignedOut>
+            </>
+          }
+        />
+        <Route
+          path="/drafts"
+          element={
+            <>
+              <SignedIn>
+                <AppContent />
+              </SignedIn>
+              <SignedOut>
+                <Navigate to="/" replace />
+              </SignedOut>
+            </>
+          }
+        />
+        <Route
+          path="/book/*"
+          element={
+            <>
+              <SignedIn>
+                <AppContent />
+              </SignedIn>
+              <SignedOut>
+                <Navigate to="/" replace />
+              </SignedOut>
+            </>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   );
 }
