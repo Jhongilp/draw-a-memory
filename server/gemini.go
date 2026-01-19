@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -14,8 +13,8 @@ import (
 	"google.golang.org/genai"
 )
 
-// AnalyzeAndClusterPhotos uses Gemini AI to analyze photos and create clusters
-func AnalyzeAndClusterPhotos(photoIds []string, photoPaths []string) ([]PhotoCluster, error) {
+// AnalyzeAndClusterPhotosWithData analyzes photos from byte data (for GCS-stored photos)
+func AnalyzeAndClusterPhotosWithData(photoIds []string, photoData [][]byte) ([]PhotoCluster, error) {
 	ctx := context.Background()
 
 	apiKey := os.Getenv("GEMINI_API_KEY")
@@ -61,26 +60,11 @@ Make sure every photo is included in exactly one cluster.`
 	textPart := genai.NewPartFromText(promptText)
 	parts = append(parts, textPart)
 
-	// Add images
-	for _, photoPath := range photoPaths {
-		imageData, err := os.ReadFile(photoPath)
-		if err != nil {
-			log.Printf("Error reading photo %s: %v", photoPath, err)
-			continue
-		}
-
-		mimeType := "image/jpeg"
-		ext := strings.ToLower(filepath.Ext(photoPath))
-		switch ext {
-		case ".png":
-			mimeType = "image/png"
-		case ".gif":
-			mimeType = "image/gif"
-		case ".webp":
-			mimeType = "image/webp"
-		}
-
-		imagePart := genai.NewPartFromBytes(imageData, mimeType)
+	// Add images from byte data
+	for _, data := range photoData {
+		// Detect mime type from magic bytes
+		mimeType := detectMimeType(data)
+		imagePart := genai.NewPartFromBytes(data, mimeType)
 		parts = append(parts, imagePart)
 	}
 
@@ -123,7 +107,7 @@ Make sure every photo is included in exactly one cluster.`
 
 	log.Printf("Gemini response: %s", responseText)
 
-	// Find JSON in response (it might be wrapped in markdown code blocks)
+	// Find JSON in response
 	jsonStart := strings.Index(responseText, "{")
 	jsonEnd := strings.LastIndex(responseText, "}")
 	if jsonStart == -1 || jsonEnd == -1 {
@@ -177,47 +161,14 @@ Make sure every photo is included in exactly one cluster.`
 	return clusters, nil
 }
 
-// CreateMockClusters creates sample clusters when AI is not available
-func CreateMockClusters(photoIds []string) []PhotoCluster {
-	if len(photoIds) == 0 {
-		return nil
-	}
-
-	// Create a single cluster with all photos
-	return []PhotoCluster{
-		{
-			ID:          uuid.New().String(),
-			PhotoIds:    photoIds,
-			Theme:       "love",
-			Title:       "Precious Moments",
-			Description: "A beautiful collection of memories capturing the joy and wonder of these special moments. Each photo tells a story of love and growth.",
-			Date:        time.Now().Format("January 2006"),
-		},
-	}
-}
-
-// themeToPromptStyle maps themes to artistic style descriptions for background generation
-var themeToPromptStyle = map[string]string{
-	"adventure":   "adventurous outdoor scenery with mountains, forests, soft watercolor style",
-	"cozy":        "warm cozy interior, soft blankets, warm lighting, gentle pastel watercolor",
-	"celebration": "festive confetti, balloons, sparkles, joyful pastel watercolor style",
-	"nature":      "gentle nature scene, flowers, leaves, butterflies, soft botanical watercolor",
-	"family":      "warm family home atmosphere, soft hearts, gentle embrace motifs, watercolor",
-	"milestone":   "celebratory stars, achievement ribbons, gentle golden accents, watercolor",
-	"playful":     "fun toys, colorful blocks, playful patterns, cheerful watercolor style",
-	"love":        "soft hearts, gentle pink and red tones, romantic watercolor florals",
-	"growth":      "growing plants, seedlings, gentle green sprouts, nature watercolor",
-	"serene":      "calm clouds, peaceful sky, soft blue tones, dreamy watercolor style",
-}
-
-// GenerateBackgroundImage generates a themed background image using Gemini 2.0 Flash
-func GenerateBackgroundImage(theme, title, description string) (string, error) {
+// GenerateBackgroundImageData generates a themed background and returns the image bytes
+func GenerateBackgroundImageData(theme, title, description string) ([]byte, error) {
 	ctx := context.Background()
 
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
 		log.Println("No GEMINI_API_KEY set, skipping background generation")
-		return "", nil
+		return nil, fmt.Errorf("no API key")
 	}
 
 	// Create Gemini client
@@ -227,7 +178,7 @@ func GenerateBackgroundImage(theme, title, description string) (string, error) {
 	})
 	if err != nil {
 		log.Printf("Failed to create Gemini client for image generation: %v", err)
-		return "", err
+		return nil, err
 	}
 
 	// Get style based on theme
@@ -252,7 +203,7 @@ Requirements:
 - Gentle, soothing, and appropriate for a baby memory book
 - Landscape orientation, suitable for a book page`, theme, title, style)
 
-	// Configure for image generation with Gemini 2.0 Flash
+	// Configure for image generation
 	config := &genai.GenerateContentConfig{
 		ResponseModalities: []string{"image", "text"},
 	}
@@ -265,47 +216,79 @@ Requirements:
 	resp, err := client.Models.GenerateContent(ctx, "gemini-2.0-flash-exp", contents, config)
 	if err != nil {
 		log.Printf("Gemini image generation error: %v", err)
-		return "", err
+		return nil, err
 	}
 
 	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
 		log.Println("No response from Gemini for image generation")
-		return "", fmt.Errorf("no response from Gemini")
+		return nil, fmt.Errorf("no response from Gemini")
 	}
 
 	// Find the image part in the response
-	var imageData []byte
 	for _, part := range resp.Candidates[0].Content.Parts {
 		if part.InlineData != nil && strings.HasPrefix(part.InlineData.MIMEType, "image/") {
-			imageData = part.InlineData.Data
-			break
+			return part.InlineData.Data, nil
 		}
 	}
 
-	if len(imageData) == 0 {
-		log.Println("No image data in Gemini response")
-		return "", fmt.Errorf("no image generated")
+	log.Println("No image data in Gemini response")
+	return nil, fmt.Errorf("no image generated")
+}
+
+// detectMimeType detects the MIME type from image magic bytes
+func detectMimeType(data []byte) string {
+	if len(data) < 4 {
+		return "image/jpeg"
 	}
 
-	// Create backgrounds directory if it doesn't exist
-	backgroundDir := "./uploads/backgrounds"
-	if err := os.MkdirAll(backgroundDir, 0755); err != nil {
-		log.Printf("Failed to create backgrounds directory: %v", err)
-		return "", err
+	// Check magic bytes
+	if data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF {
+		return "image/jpeg"
+	}
+	if data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47 {
+		return "image/png"
+	}
+	if data[0] == 0x47 && data[1] == 0x49 && data[2] == 0x46 {
+		return "image/gif"
+	}
+	if len(data) >= 12 && data[0] == 0x52 && data[1] == 0x49 && data[2] == 0x46 && data[3] == 0x46 {
+		if data[8] == 0x57 && data[9] == 0x45 && data[10] == 0x42 && data[11] == 0x50 {
+			return "image/webp"
+		}
 	}
 
-	// Save the image
-	filename := fmt.Sprintf("bg_%s_%s.png", theme, uuid.New().String()[:8])
-	filePath := filepath.Join(backgroundDir, filename)
+	return "image/jpeg" // default
+}
 
-	if err := os.WriteFile(filePath, imageData, 0644); err != nil {
-		log.Printf("Failed to save background image: %v", err)
-		return "", err
+// themeToPromptStyle maps themes to artistic style descriptions for background generation
+var themeToPromptStyle = map[string]string{
+	"adventure":   "adventurous outdoor scenery with mountains, forests, soft watercolor style",
+	"cozy":        "warm cozy interior, soft blankets, warm lighting, gentle pastel watercolor",
+	"celebration": "festive confetti, balloons, sparkles, joyful pastel watercolor style",
+	"nature":      "gentle nature scene, flowers, leaves, butterflies, soft botanical watercolor",
+	"family":      "warm family home atmosphere, soft hearts, gentle embrace motifs, watercolor",
+	"milestone":   "celebratory stars, achievement ribbons, gentle golden accents, watercolor",
+	"playful":     "fun toys, colorful blocks, playful patterns, cheerful watercolor style",
+	"love":        "soft hearts, gentle pink and red tones, romantic watercolor florals",
+	"growth":      "growing plants, seedlings, gentle green sprouts, nature watercolor",
+	"serene":      "calm clouds, peaceful sky, soft blue tones, dreamy watercolor style",
+}
+
+// CreateMockClusters creates sample clusters when AI is not available
+func CreateMockClusters(photoIds []string) []PhotoCluster {
+	if len(photoIds) == 0 {
+		return nil
 	}
 
-	// Return the URL path
-	urlPath := fmt.Sprintf("/uploads/backgrounds/%s", filename)
-	log.Printf("Generated background image: %s", urlPath)
-
-	return urlPath, nil
+	// Create a single cluster with all photos
+	return []PhotoCluster{
+		{
+			ID:          uuid.New().String(),
+			PhotoIds:    photoIds,
+			Theme:       "love",
+			Title:       "Precious Moments",
+			Description: "A beautiful collection of memories capturing the joy and wonder of these special moments. Each photo tells a story of love and growth.",
+			Date:        time.Now().Format("January 2006"),
+		},
+	}
 }

@@ -23,3 +23,6 @@ Thumbs.db
 # Go
 server/*.exe
 server/*.exe~
+
+# Google Cloud credentials
+service-account.json
