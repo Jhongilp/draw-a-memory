@@ -50,6 +50,8 @@ export function PageSidebar({ pages, onReorder: _onReorder }: PageSidebarProps) 
     return null;
   }, []);
 
+  console.log('PageSidebar rendering with pages:', pages);
+
   if (pages.length === 0) {
     return (
       <aside className="w-20 bg-white/80 backdrop-blur-sm border-r border-pink-100 flex flex-col items-center py-6">

@@ -79,8 +79,11 @@ func (app *App) handleGetDrafts(w http.ResponseWriter, r *http.Request, parts []
 		return
 	}
 
+	log.Printf("[DEBUG] Found %d drafts for user %s", len(dbDrafts), dbUser.ID)
+
 	var allDrafts []PageDraft
 	for _, draft := range dbDrafts {
+		log.Printf("[DEBUG] Draft ID=%s, Status=%s, Title=%s", draft.ID, draft.Status, draft.Title.String)
 		photoIDs, _ := app.db.GetDraftPhotos(ctx, draft.ID)
 
 		var backgroundURL string
@@ -128,12 +131,16 @@ func (app *App) handleUpdateDraft(w http.ResponseWriter, r *http.Request, parts 
 	}
 
 	// Check if this is an approve action
+	log.Printf("[DEBUG] handleUpdateDraft: parts=%v, len=%d", parts, len(parts))
 	if len(parts) == 2 && parts[1] == "approve" {
+		log.Printf("[DEBUG] Approving draft ID=%s", draftID)
 		existingDraft.Status = "approved"
 		if err := app.db.UpdateDraft(ctx, existingDraft); err != nil {
+			log.Printf("[ERROR] Failed to approve draft %s: %v", draftID, err)
 			SendError(w, "Failed to approve draft", http.StatusInternalServerError)
 			return
 		}
+		log.Printf("[DEBUG] Successfully approved draft ID=%s", draftID)
 
 		photoIDs, _ := app.db.GetDraftPhotos(ctx, draftID)
 		var backgroundURL string
