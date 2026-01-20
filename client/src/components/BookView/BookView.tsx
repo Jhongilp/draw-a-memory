@@ -73,17 +73,19 @@ export function BookView({ pages }: BookViewProps) {
                 )}
 
                 {/* Page card */}
+                {page.backgroundPath && console.log('Background URL:', getPhotoUrl(page.backgroundPath))}
                 <div 
                   className={`${themeStyle.border} border-2 rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow relative`}
                 >
                   {/* Background image with overlay */}
                   {page.backgroundPath ? (
                     <>
-                      <div 
-                        className="absolute inset-0 bg-cover bg-center"
-                        style={{ 
-                          backgroundImage: `url(${getPhotoUrl(page.backgroundPath)})`,
-                        }}
+                      <img 
+                        src={getPhotoUrl(page.backgroundPath)} 
+                        alt="" 
+                        className="absolute inset-0 w-full h-full object-cover"
+                        onError={(e) => console.error('Background image failed to load:', e)}
+                        onLoad={() => console.log('Background image loaded successfully')}
                       />
                       {/* Semi-transparent overlay for readability */}
                       <div className="absolute inset-0 bg-white/70" />

@@ -83,7 +83,6 @@ func (app *App) handleGetDrafts(w http.ResponseWriter, r *http.Request, parts []
 
 	var allDrafts []PageDraft
 	for _, draft := range dbDrafts {
-		log.Printf("[DEBUG] Draft ID=%s, Status=%s, Title=%s", draft.ID, draft.Status, draft.Title.String)
 		photoIDs, _ := app.db.GetDraftPhotos(ctx, draft.ID)
 
 		var backgroundURL string

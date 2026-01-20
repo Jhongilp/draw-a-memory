@@ -207,7 +207,7 @@ export function SinglePageView({ pages }: SinglePageViewProps) {
                 <div
                   className="absolute inset-0 bg-cover bg-center"
                   style={{
-                    backgroundImage: `url(${getPhotoUrl(page.backgroundPath)})`,
+                    backgroundImage: `url("${getPhotoUrl(page.backgroundPath)}")`,
                   }}
                 />
                 <div className="absolute inset-0 bg-white/70" />

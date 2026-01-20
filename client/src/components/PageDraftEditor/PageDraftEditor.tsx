@@ -205,7 +205,7 @@ export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEdit
         <>
           <div 
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${backgroundUrl})` }}
+            style={{ backgroundImage: `url("${backgroundUrl}")` }}
           />
           <div className="absolute inset-0 bg-white/70" />
         </>

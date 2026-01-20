@@ -421,6 +421,7 @@ func (app *App) HandleClusterPhotos(w http.ResponseWriter, r *http.Request) {
 
 		// Generate themed background image
 		var backgroundURL string
+		var bgGCSPath string
 		backgroundData, err := GenerateBackgroundImageData(cluster.Theme, cluster.Title, cluster.Description)
 		if err != nil {
 			log.Printf("Failed to generate background for cluster %s: %v", cluster.ID, err)
@@ -429,6 +430,7 @@ func (app *App) HandleClusterPhotos(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				log.Printf("Failed to upload background: %v", err)
 			} else {
+				bgGCSPath = bgPath
 				backgroundURL, _ = app.storage.GetSignedURL(ctx, bgPath)
 				clusters[i].BackgroundPath = backgroundURL
 			}
@@ -443,7 +445,7 @@ func (app *App) HandleClusterPhotos(w http.ResponseWriter, r *http.Request) {
 			Title:             sql.NullString{String: cluster.Title, Valid: cluster.Title != ""},
 			Description:       sql.NullString{String: cluster.Description, Valid: cluster.Description != ""},
 			Theme:             sql.NullString{String: cluster.Theme, Valid: cluster.Theme != ""},
-			BackgroundGCSPath: sql.NullString{String: backgroundURL, Valid: backgroundURL != ""},
+			BackgroundGCSPath: sql.NullString{String: bgGCSPath, Valid: bgGCSPath != ""},
 			Status:            "draft",
 		}
 
