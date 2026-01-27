@@ -13,16 +13,22 @@ import { SignInPage } from './components/SignInPage';
 import { SignUpPage } from './components/SignUpPage';
 import { LandingPage } from './components/LandingPage';
 import type { Photo, PhotoCluster, PageDraft, Theme } from './types/photo';
-import { getPhotos, analyzePhotos, getPages, savePageDraft, initializeApi } from './api/photoApi';
+import { analyzePhotos, savePageDraft, initializeApi } from './api/photoApi';
+import { useAppDispatch, useAppSelector } from './store/hooks';
+import { fetchPagesData, addPage, reorderPages, setPhotos } from './store/slices';
 
 function AppContent() {
   const location = useLocation();
   const { getToken, isSignedIn } = useAuth();
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const dispatch = useAppDispatch();
+  
+  // Get pages and photos from Redux store
+  const pages = useAppSelector((state) => state.pages.pages);
+  const photos = useAppSelector((state) => state.pages.photos);
+  const isLoading = useAppSelector((state) => state.pages.isLoading);
+  
   const [clusters, setClusters] = useState<PhotoCluster[]>([]);
-  const [pages, setPages] = useState<PageDraft[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isApiInitialized, setIsApiInitialized] = useState(false);
 
   const isBookView = location.pathname.startsWith('/book');
@@ -38,41 +44,13 @@ function AppContent() {
   // Load data only after API is initialized and user is signed in
   useEffect(() => {
     if (isApiInitialized && isSignedIn) {
-      loadData();
-    } else if (!isSignedIn) {
-      setIsLoading(false);
+      dispatch(fetchPagesData());
     }
-  }, [isApiInitialized, isSignedIn]);
-
-  const loadData = async () => {
-    try {
-      const [fetchedPhotos, fetchedPages] = await Promise.all([
-        getPhotos(), 
-        getPages().catch(() => []),
-      ]);
-      const allPhotos = fetchedPhotos || [];
-      setPhotos(allPhotos);
-      console.log('Fetched photos:', allPhotos);
-      
-      // Populate photos in each page based on photoIds
-      const pagesWithPhotos = (fetchedPages || []).map(page => ({
-        ...page,
-        photos: page.photoIds
-          ?.map(id => allPhotos.find(p => p.id === id))
-          .filter((p): p is Photo => p !== undefined) || [],
-      }));
-      console.log('Fetched pages:', pagesWithPhotos);
-      setPages(pagesWithPhotos);
-    } catch (error) {
-      console.error('Failed to load data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [isApiInitialized, isSignedIn, dispatch]);
 
   const handleUploadComplete = async (newPhotos: Photo[]) => {
     const allPhotos = [...newPhotos, ...photos];
-    setPhotos(allPhotos);
+    dispatch(setPhotos(allPhotos));
     
     setIsAnalyzing(true);
     try {
@@ -127,7 +105,7 @@ function AppContent() {
     } catch (error) {
       console.error('Failed to save page:', error);
     }
-    setPages((prev) => [...prev, draft]);
+    dispatch(addPage(draft));
     setClusters((prev) => prev.filter((c) => c.id !== draft.clusterId));
   };
 
@@ -136,7 +114,7 @@ function AppContent() {
   };
 
   const handleReorderPages = (reorderedPages: PageDraft[]) => {
-    setPages(reorderedPages);
+    dispatch(reorderPages(reorderedPages));
     // TODO: Persist order to server
   };
 
