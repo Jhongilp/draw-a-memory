@@ -1,37 +1,40 @@
-import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { SignedIn, SignedOut, useAuth } from '@clerk/clerk-react';
-import { Loader2 } from 'lucide-react';
-import { Header } from './components/Header';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { UploadView } from './components/UploadView';
-import { DraftsView } from './components/DraftsView';
-import { BookLayout } from './components/BookLayout';
-import { BookOverview } from './components/BookOverview';
-import { SinglePageView } from './components/SinglePageView';
-import { SignInPage } from './components/SignInPage';
-import { SignUpPage } from './components/SignUpPage';
-import { LandingPage } from './components/LandingPage';
-import type { Photo, PhotoCluster, PageDraft, Theme } from './types/photo';
-import { analyzePhotos, savePageDraft, initializeApi } from './api/photoApi';
-import { useAppDispatch, useAppSelector } from './store/hooks';
-import { fetchPagesData, addPage, reorderPages, setPhotos } from './store/slices';
+import { useState, useEffect } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
+import { SignedIn, SignedOut, useAuth } from "@clerk/clerk-react";
+import { Loader2 } from "lucide-react";
+import { Header } from "./components/Header";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { UploadView } from "./components/UploadView";
+import { DraftsView } from "./components/DraftsView";
+import { BookLayout } from "./components/BookLayout";
+import { BookOverview } from "./components/BookOverview";
+import { SinglePageView } from "./components/SinglePageView";
+import { SignInPage } from "./components/SignInPage";
+import { SignUpPage } from "./components/SignUpPage";
+import { LandingPage } from "./components/LandingPage";
+import type { PageDraft } from "./types/photo";
+import { savePageDraft, initializeApi } from "./api/photoApi";
+import { useAppDispatch, useAppSelector } from "./store/hooks";
+import { fetchPagesData, addPage, reorderPages, removeCluster } from "./store/slices";
 
 function AppContent() {
   const location = useLocation();
   const { getToken, isSignedIn } = useAuth();
   const dispatch = useAppDispatch();
-  
+
   // Get pages and photos from Redux store
   const pages = useAppSelector((state) => state.pages.pages);
-  const photos = useAppSelector((state) => state.pages.photos);
   const isLoading = useAppSelector((state) => state.pages.isLoading);
-  
-  const [clusters, setClusters] = useState<PhotoCluster[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
   const [isApiInitialized, setIsApiInitialized] = useState(false);
 
-  const isBookView = location.pathname.startsWith('/book');
+  const isBookView = location.pathname.startsWith("/book");
 
   // Initialize API with Clerk token getter
   useEffect(() => {
@@ -48,69 +51,18 @@ function AppContent() {
     }
   }, [isApiInitialized, isSignedIn, dispatch]);
 
-  const handleUploadComplete = async (newPhotos: Photo[]) => {
-    const allPhotos = [...newPhotos, ...photos];
-    dispatch(setPhotos(allPhotos));
-    
-    setIsAnalyzing(true);
-    try {
-      const photoIds = newPhotos.map((p) => p.id);
-      const response = await analyzePhotos(photoIds);
-      if (response.clusters && response.clusters.length > 0) {
-        const clustersWithPhotos = response.clusters.map(cluster => {
-          const serverDraft = response.drafts?.find(d => d.clusterId === cluster.id);
-          return {
-            ...cluster,
-            draftId: serverDraft?.id,
-            backgroundPath: serverDraft?.backgroundPath || cluster.backgroundPath,
-            photos: cluster.photoIds.map(id => 
-              allPhotos.find(p => p.id === id) || newPhotos.find(p => p.id === id)
-            ).filter(Boolean) as Photo[],
-            suggestedTitle: cluster.title,
-            suggestedDescription: cluster.description,
-            suggestedTheme: cluster.theme,
-            dateRange: cluster.date,
-            ageString: '',
-            status: 'draft' as const,
-          };
-        });
-        setClusters(clustersWithPhotos);
-      }
-    } catch (error) {
-      console.error('Failed to analyze photos:', error);
-      const mockCluster: PhotoCluster = {
-        id: crypto.randomUUID(),
-        photoIds: newPhotos.map(p => p.id),
-        photos: newPhotos,
-        title: 'A Special Day',
-        description: 'A wonderful day filled with precious moments and happy memories.',
-        theme: 'family' as Theme,
-        date: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-        suggestedTitle: 'A Special Day',
-        suggestedDescription: 'A wonderful day filled with precious moments and happy memories.',
-        suggestedTheme: 'family' as Theme,
-        dateRange: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-        ageString: '',
-        status: 'draft',
-      };
-      setClusters([mockCluster]);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
   const handleApproveDraft = async (draft: PageDraft) => {
     try {
       await savePageDraft(draft);
     } catch (error) {
-      console.error('Failed to save page:', error);
+      console.error("Failed to save page:", error);
     }
     dispatch(addPage(draft));
-    setClusters((prev) => prev.filter((c) => c.id !== draft.clusterId));
+    dispatch(removeCluster(draft.clusterId));
   };
 
   const handleDiscardDraft = (clusterId: string) => {
-    setClusters((prev) => prev.filter((c) => c.id !== clusterId));
+    dispatch(removeCluster(clusterId));
   };
 
   const handleReorderPages = (reorderedPages: PageDraft[]) => {
@@ -120,10 +72,9 @@ function AppContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-linear-to-br from-pink-50 via-purple-50 to-blue-50">
-      <Header 
-        clusters={clusters} 
-        pages={pages} 
-        currentPath={location.pathname} 
+      <Header
+        pages={pages}
+        currentPath={location.pathname}
       />
 
       {/* Main Content */}
@@ -133,24 +84,28 @@ function AppContent() {
         </div>
       ) : (
         <>
-          {location.pathname.startsWith('/upload') && (
-            <UploadView 
-              isAnalyzing={isAnalyzing} 
-              onUploadComplete={handleUploadComplete} 
+          {location.pathname.startsWith("/upload") && <UploadView />}
+          {location.pathname.startsWith("/drafts") && (
+            <DraftsView
+              onApprove={handleApproveDraft}
+              onDiscard={handleDiscardDraft}
             />
           )}
-          {location.pathname.startsWith('/drafts') && (
-            <DraftsView 
-              clusters={clusters} 
-              onApprove={handleApproveDraft} 
-              onDiscard={handleDiscardDraft} 
-            />
-          )}
-          {location.pathname.startsWith('/book') && (
+          {location.pathname.startsWith("/book") && (
             <Routes>
-              <Route element={<BookLayout pages={pages} onReorderPages={handleReorderPages} />}>
+              <Route
+                element={
+                  <BookLayout
+                    pages={pages}
+                    onReorderPages={handleReorderPages}
+                  />
+                }
+              >
                 <Route index element={<BookOverview pages={pages} />} />
-                <Route path="page/:pageId" element={<SinglePageView pages={pages} />} />
+                <Route
+                  path="page/:pageId"
+                  element={<SinglePageView pages={pages} />}
+                />
               </Route>
             </Routes>
           )}

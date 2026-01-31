@@ -1,15 +1,16 @@
 import { Link } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { PageDraftEditor } from '../PageDraftEditor';
-import type { PhotoCluster, PageDraft } from '../../types/photo';
+import type { PageDraft } from '../../types/photo';
+import { useAppSelector } from '../../store/hooks';
 
 interface DraftsViewProps {
-  clusters: PhotoCluster[];
   onApprove: (draft: PageDraft) => void;
   onDiscard: (clusterId: string) => void;
 }
 
-export function DraftsView({ clusters, onApprove, onDiscard }: DraftsViewProps) {
+export function DraftsView({ onApprove, onDiscard }: DraftsViewProps) {
+  const clusters = useAppSelector((state) => state.clusters.clusters);
   return (
     <main className="flex-1 overflow-auto p-10">
       <div className="max-w-xl mx-auto space-y-8">

@@ -75,7 +75,8 @@ const pagesSlice = createSlice({
       state.error = action.payload;
     },
     setPhotos: (state, action: PayloadAction<Photo[]>) => {
-      state.photos = action.payload;
+      // state.photos = action.payload;
+      state.photos = [...state.photos, ...action.payload];
     },
     // Populate photos for pages based on a photos array
     populatePhotos: (state, action: PayloadAction<Photo[]>) => {

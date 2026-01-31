@@ -1,9 +1,10 @@
 import { configureStore } from '@reduxjs/toolkit';
-import { pagesReducer } from './slices';
+import { pagesReducer, clustersReducer } from './slices';
 
 export const store = configureStore({
   reducer: {
     pages: pagesReducer,
+    clusters: clustersReducer,
   },
 });
 

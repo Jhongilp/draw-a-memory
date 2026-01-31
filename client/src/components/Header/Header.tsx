@@ -1,15 +1,16 @@
 import { Link } from 'react-router-dom';
 import { UserButton } from '@clerk/clerk-react';
 import { Baby, Upload, BookOpen, Sparkles } from 'lucide-react';
-import type { PhotoCluster, PageDraft } from '../../types/photo';
+import type { PageDraft } from '../../types/photo';
+import { useAppSelector } from '../../store/hooks';
 
 interface HeaderProps {
-  clusters: PhotoCluster[];
   pages: PageDraft[];
   currentPath: string;
 }
 
-export function Header({ clusters, pages, currentPath }: HeaderProps) {
+export function Header({ pages, currentPath }: HeaderProps) {
+  const clusters = useAppSelector((state) => state.clusters.clusters);
   const isUploadView = currentPath === '/' || currentPath === '/upload';
   const isDraftsView = currentPath === '/drafts';
   const isBookView = currentPath.startsWith('/book');
