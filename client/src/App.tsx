@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -21,7 +21,12 @@ import { LandingPage } from "./components/LandingPage";
 import type { PageDraft } from "./types/photo";
 import { savePageDraft, initializeApi } from "./api/photoApi";
 import { useAppDispatch, useAppSelector } from "./store/hooks";
-import { fetchPagesData, addPage, reorderPages, removeCluster } from "./store/slices";
+import {
+  fetchPagesData,
+  addPage,
+  reorderPages,
+  removeCluster,
+} from "./store/slices";
 
 function AppContent() {
   const location = useLocation();
@@ -31,24 +36,15 @@ function AppContent() {
   // Get loading state from Redux store
   const isLoading = useAppSelector((state) => state.pages.isLoading);
 
-  const [isApiInitialized, setIsApiInitialized] = useState(false);
-
   const isBookView = location.pathname.startsWith("/book");
 
-  // Initialize API with Clerk token getter
+  // Initialize API with Clerk token and load data when signed in
   useEffect(() => {
     if (isSignedIn && getToken) {
       initializeApi(getToken);
-      setIsApiInitialized(true);
-    }
-  }, [isSignedIn, getToken]);
-
-  // Load data only after API is initialized and user is signed in
-  useEffect(() => {
-    if (isApiInitialized && isSignedIn) {
       dispatch(fetchPagesData());
     }
-  }, [isApiInitialized, isSignedIn, dispatch]);
+  }, [isSignedIn, getToken, dispatch]);
 
   const handleApproveDraft = async (draft: PageDraft) => {
     try {
@@ -90,17 +86,10 @@ function AppContent() {
           {location.pathname.startsWith("/book") && (
             <Routes>
               <Route
-                element={
-                  <BookLayout
-                    onReorderPages={handleReorderPages}
-                  />
-                }
+                element={<BookLayout onReorderPages={handleReorderPages} />}
               >
                 <Route index element={<BookOverview />} />
-                <Route
-                  path="page/:pageId"
-                  element={<SinglePageView />}
-                />
+                <Route path="page/:pageId" element={<SinglePageView />} />
               </Route>
             </Routes>
           )}
