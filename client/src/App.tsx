@@ -28,8 +28,7 @@ function AppContent() {
   const { getToken, isSignedIn } = useAuth();
   const dispatch = useAppDispatch();
 
-  // Get pages and photos from Redux store
-  const pages = useAppSelector((state) => state.pages.pages);
+  // Get loading state from Redux store
   const isLoading = useAppSelector((state) => state.pages.isLoading);
 
   const [isApiInitialized, setIsApiInitialized] = useState(false);
@@ -72,10 +71,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-linear-to-br from-pink-50 via-purple-50 to-blue-50">
-      <Header
-        pages={pages}
-        currentPath={location.pathname}
-      />
+      <Header currentPath={location.pathname} />
 
       {/* Main Content */}
       {isLoading ? (
@@ -96,15 +92,14 @@ function AppContent() {
               <Route
                 element={
                   <BookLayout
-                    pages={pages}
                     onReorderPages={handleReorderPages}
                   />
                 }
               >
-                <Route index element={<BookOverview pages={pages} />} />
+                <Route index element={<BookOverview />} />
                 <Route
                   path="page/:pageId"
-                  element={<SinglePageView pages={pages} />}
+                  element={<SinglePageView />}
                 />
               </Route>
             </Routes>

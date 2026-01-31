@@ -1,13 +1,11 @@
 import { Link } from 'react-router-dom';
 import { Book, Heart, ArrowRight } from 'lucide-react';
-import type { PageDraft } from '../../types/photo';
 import { getPhotoUrl } from '../../api/photoApi';
+import { useAppSelector } from '../../store/hooks';
 
-interface BookOverviewProps {
-  pages: PageDraft[];
-}
-
-export function BookOverview({ pages }: BookOverviewProps) {
+export function BookOverview() {
+  const pages = useAppSelector((state) => state.pages.pages);
+  
   if (pages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">

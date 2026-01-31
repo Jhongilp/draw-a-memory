@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Calendar, Book } from "lucide-react";
 import type { PageDraft, Theme } from "../../types/photo";
 import { getPhotoUrl } from "../../api/photoApi";
+import { useAppSelector } from "../../store/hooks";
 
 // Cache for preloaded images to keep them in memory
 const imageCache = new Map<string, HTMLImageElement>();
@@ -44,10 +45,6 @@ function preloadPageImages(page: PageDraft | null): Promise<void>[] {
   });
 
   return promises;
-}
-
-interface SinglePageViewProps {
-  pages: PageDraft[];
 }
 
 const themeColors: Record<
@@ -102,7 +99,8 @@ const themeColors: Record<
   serene: { bg: "bg-sky-50", accent: "text-sky-600", border: "border-sky-200" },
 };
 
-export function SinglePageView({ pages }: SinglePageViewProps) {
+export function SinglePageView() {
+  const pages = useAppSelector((state) => state.pages.pages);
   const { pageId } = useParams<{ pageId: string }>();
   const [imagesReady, setImagesReady] = useState(false);
 
