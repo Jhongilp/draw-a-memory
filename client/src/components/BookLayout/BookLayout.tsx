@@ -1,18 +1,20 @@
 import { Outlet } from 'react-router-dom';
 import { PageSidebar } from '../PageSidebar';
 import type { PageDraft } from '../../types/photo';
-import { useAppSelector } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { reorderPages } from '../../store/slices';
 
-interface BookLayoutProps {
-  onReorderPages?: (pages: PageDraft[]) => void;
-}
-
-export function BookLayout({ onReorderPages }: BookLayoutProps) {
+export function BookLayout() {
   const pages = useAppSelector((state) => state.pages.pages);
+  const dispatch = useAppDispatch();
+    const handleReorderPages = (reorderedPages: PageDraft[]) => {
+    dispatch(reorderPages(reorderedPages));
+    // TODO: Persist order to server
+  };
   
   return (
     <div className="flex flex-1 overflow-hidden">
-      <PageSidebar pages={pages} onReorder={onReorderPages} />
+      <PageSidebar pages={pages} onReorder={handleReorderPages} />
       <Outlet />
     </div>
   );

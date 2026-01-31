@@ -18,15 +18,9 @@ import { SinglePageView } from "./components/SinglePageView";
 import { SignInPage } from "./components/SignInPage";
 import { SignUpPage } from "./components/SignUpPage";
 import { LandingPage } from "./components/LandingPage";
-import type { PageDraft } from "./types/photo";
-import { savePageDraft, initializeApi } from "./api/photoApi";
+import { initializeApi } from "./api/photoApi";
 import { useAppDispatch, useAppSelector } from "./store/hooks";
-import {
-  fetchPagesData,
-  addPage,
-  reorderPages,
-  removeCluster,
-} from "./store/slices";
+import { fetchPagesData } from "./store/slices";
 
 function AppContent() {
   const location = useLocation();
@@ -46,25 +40,6 @@ function AppContent() {
     }
   }, [isSignedIn, getToken, dispatch]);
 
-  const handleApproveDraft = async (draft: PageDraft) => {
-    try {
-      await savePageDraft(draft);
-    } catch (error) {
-      console.error("Failed to save page:", error);
-    }
-    dispatch(addPage(draft));
-    dispatch(removeCluster(draft.clusterId));
-  };
-
-  const handleDiscardDraft = (clusterId: string) => {
-    dispatch(removeCluster(clusterId));
-  };
-
-  const handleReorderPages = (reorderedPages: PageDraft[]) => {
-    dispatch(reorderPages(reorderedPages));
-    // TODO: Persist order to server
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-linear-to-br from-pink-50 via-purple-50 to-blue-50">
       <Header currentPath={location.pathname} />
@@ -77,17 +52,10 @@ function AppContent() {
       ) : (
         <>
           {location.pathname.startsWith("/upload") && <UploadView />}
-          {location.pathname.startsWith("/drafts") && (
-            <DraftsView
-              onApprove={handleApproveDraft}
-              onDiscard={handleDiscardDraft}
-            />
-          )}
+          {location.pathname.startsWith("/drafts") && <DraftsView />}
           {location.pathname.startsWith("/book") && (
             <Routes>
-              <Route
-                element={<BookLayout onReorderPages={handleReorderPages} />}
-              >
+              <Route element={<BookLayout />}>
                 <Route index element={<BookOverview />} />
                 <Route path="page/:pageId" element={<SinglePageView />} />
               </Route>
