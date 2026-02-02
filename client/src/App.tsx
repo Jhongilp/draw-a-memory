@@ -3,6 +3,7 @@ import {
   BrowserRouter,
   Routes,
   Route,
+  Outlet,
   useLocation,
   Navigate,
 } from "react-router-dom";
@@ -22,15 +23,14 @@ import { initializeApi } from "./api/photoApi";
 import { useAppDispatch, useAppSelector } from "./store/hooks";
 import { fetchPagesData } from "./store/slices";
 
-function AppContent() {
+// Layout for protected routes with header and footer
+function AppLayout({ showFooter = true }: { showFooter?: boolean }) {
   const location = useLocation();
   const { getToken, isSignedIn } = useAuth();
   const dispatch = useAppDispatch();
 
   // Get loading state from Redux store
   const isLoading = useAppSelector((state) => state.pages.isLoading);
-
-  const isBookView = location.pathname.startsWith("/book");
 
   // Initialize API with Clerk token and load data when signed in
   useEffect(() => {
@@ -50,22 +50,11 @@ function AppContent() {
           <Loader2 className="w-8 h-8 text-pink-500 animate-spin" />
         </div>
       ) : (
-        <>
-          {location.pathname.startsWith("/upload") && <UploadView />}
-          {location.pathname.startsWith("/drafts") && <DraftsView />}
-          {location.pathname.startsWith("/book") && (
-            <Routes>
-              <Route element={<BookLayout />}>
-                <Route index element={<BookOverview />} />
-                <Route path="page/:pageId" element={<SinglePageView />} />
-              </Route>
-            </Routes>
-          )}
-        </>
+        <Outlet />
       )}
 
-      {/* Footer - only show on non-book views */}
-      {!isBookView && (
+      {/* Footer */}
+      {showFooter && (
         <footer className="text-center py-8 text-gray-400 text-sm">
           Made with 💕 for your little ones
         </footer>
@@ -95,31 +84,31 @@ function App() {
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
 
-        {/* Protected routes - using ProtectedRoute wrapper */}
+        {/* Protected routes with standard layout (with footer) */}
         <Route
-          path="/upload/*"
           element={
             <ProtectedRoute>
-              <AppContent />
+              <AppLayout showFooter={true} />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route path="/upload" element={<UploadView />} />
+          <Route path="/drafts" element={<DraftsView />} />
+        </Route>
+
+        {/* Protected book routes (no footer, nested layout) */}
         <Route
-          path="/drafts/*"
           element={
             <ProtectedRoute>
-              <AppContent />
+              <AppLayout showFooter={false} />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/book/*"
-          element={
-            <ProtectedRoute>
-              <AppContent />
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route path="/book" element={<BookLayout />}>
+            <Route index element={<BookOverview />} />
+            <Route path="page/:pageId" element={<SinglePageView />} />
+          </Route>
+        </Route>
       </Routes>
     </BrowserRouter>
   );
