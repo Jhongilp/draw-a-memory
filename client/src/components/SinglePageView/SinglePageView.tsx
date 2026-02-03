@@ -208,7 +208,7 @@ export function SinglePageView() {
                     backgroundImage: `url("${getPhotoUrl(page.backgroundPath)}")`,
                   }}
                 />
-                <div className="absolute inset-0 bg-white/70" />
+                <div className="absolute inset-0 bg-white/40" />
               </>
             ) : (
               <div className={`absolute inset-0 ${themeStyle.bg}`} />
