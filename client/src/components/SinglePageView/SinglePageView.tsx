@@ -1,9 +1,10 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Calendar, Book } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Book, Trash2 } from "lucide-react";
 import type { PageDraft, Theme } from "../../types/photo";
-import { getPhotoUrl } from "../../api/photoApi";
-import { useAppSelector } from "../../store/hooks";
+import { getPhotoUrl, deleteDraft } from "../../api/photoApi";
+import { useAppSelector, useAppDispatch } from "../../store/hooks";
+import { removePage } from "../../store/slices";
 
 // Cache for preloaded images to keep them in memory
 const imageCache = new Map<string, HTMLImageElement>();
@@ -103,6 +104,10 @@ export function SinglePageView() {
   const pages = useAppSelector((state) => state.pages.pages);
   const { pageId } = useParams<{ pageId: string }>();
   const [imagesReady, setImagesReady] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
   const currentIndex = pages.findIndex((p) => p.id === pageId);
   const page = pages[currentIndex];
@@ -128,6 +133,29 @@ export function SinglePageView() {
     preloadPageImages(prevPage);
     preloadPageImages(nextPage);
   }, [prevPage, nextPage]);
+
+  const handleDeletePage = async () => {
+    if (!page || isDeleting) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteDraft(page.id);
+      dispatch(removePage(page.id));
+      setShowDeleteConfirm(false);
+      // Navigate to next page, previous page, or book overview
+      if (nextPage) {
+        navigate(`/book/page/${nextPage.id}`);
+      } else if (prevPage) {
+        navigate(`/book/page/${prevPage.id}`);
+      } else {
+        navigate('/book');
+      }
+    } catch (error) {
+      console.error('Failed to delete page:', error);
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
 
   if (!page) {
     return (
@@ -171,10 +199,17 @@ export function SinglePageView() {
           )}
         </div>
 
-        <div className="text-center">
+        <div className="text-center flex items-center gap-3">
           <span className="text-sm font-medium text-gray-600">
             Page {currentIndex + 1} of {pages.length}
           </span>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            title="Delete page"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="flex items-center gap-4">
@@ -289,6 +324,46 @@ export function SinglePageView() {
           </div>
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-2xl">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              Delete this page?
+            </h3>
+            <p className="text-gray-600 text-sm mb-4">
+              This will permanently delete "{page.title}" and all its photos. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="flex-1 py-2 px-4 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeletePage}
+                disabled={isDeleting}
+                className="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
