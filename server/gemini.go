@@ -212,8 +212,8 @@ Requirements:
 		genai.NewContentFromText(prompt, "user"),
 	}
 
-	// Generate using gemini-2.0-flash-exp which supports native image generation
-	resp, err := client.Models.GenerateContent(ctx, "gemini-2.0-flash-exp", contents, config)
+	// Generate using gemini-3-pro-image-preview which supports native image generation
+	resp, err := client.Models.GenerateContent(ctx, "gemini-3-pro-image-preview", contents, config)
 	if err != nil {
 		log.Printf("Gemini image generation error: %v", err)
 		return nil, err
