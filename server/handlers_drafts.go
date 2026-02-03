@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"log"
@@ -133,6 +134,42 @@ func (app *App) handleUpdateDraft(w http.ResponseWriter, r *http.Request, parts 
 	log.Printf("[DEBUG] handleUpdateDraft: parts=%v, len=%d", parts, len(parts))
 	if len(parts) == 2 && parts[1] == "approve" {
 		log.Printf("[DEBUG] Approving draft ID=%s", draftID)
+
+		// Parse request body to get the approved photo IDs
+		var approveReq PageDraft
+		if err := json.NewDecoder(r.Body).Decode(&approveReq); err != nil {
+			log.Printf("[ERROR] Failed to parse approve request: %v", err)
+			SendError(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		// Get original photos from the draft/cluster
+		originalPhotoIDs, err := app.db.GetDraftAllPhotoIDs(ctx, draftID)
+		if err != nil {
+			log.Printf("[WARN] Failed to get original draft photos: %v", err)
+			originalPhotoIDs = []string{}
+		}
+
+		// Find discarded photos (photos in original but not in approved)
+		approvedSet := make(map[string]bool)
+		for _, id := range approveReq.PhotoIds {
+			approvedSet[id] = true
+		}
+
+		var discardedPhotoIDs []string
+		for _, id := range originalPhotoIDs {
+			if !approvedSet[id] {
+				discardedPhotoIDs = append(discardedPhotoIDs, id)
+			}
+		}
+
+		// Delete discarded photos from GCS and database
+		if len(discardedPhotoIDs) > 0 {
+			log.Printf("[DEBUG] Deleting %d discarded photos: %v", len(discardedPhotoIDs), discardedPhotoIDs)
+			app.deletePhotosFromStorageAndDB(ctx, discardedPhotoIDs)
+		}
+
+		// Update draft status
 		existingDraft.Status = "approved"
 		if err := app.db.UpdateDraft(ctx, existingDraft); err != nil {
 			log.Printf("[ERROR] Failed to approve draft %s: %v", draftID, err)
@@ -196,10 +233,53 @@ func (app *App) handleDeleteDraft(w http.ResponseWriter, r *http.Request, parts 
 		return
 	}
 
+	// Get all photos from the draft/cluster before deleting
+	allPhotoIDs, err := app.db.GetDraftAllPhotoIDs(ctx, draftID)
+	if err != nil {
+		log.Printf("[WARN] Failed to get draft photos for deletion: %v", err)
+		allPhotoIDs = []string{}
+	}
+
+	// Delete the draft from database
 	if err := app.db.DeleteDraft(ctx, dbUser.ID, draftID); err != nil {
 		SendError(w, "Draft not found", http.StatusNotFound)
 		return
 	}
 
+	// Delete all associated photos from GCS and database
+	if len(allPhotoIDs) > 0 {
+		log.Printf("[DEBUG] Deleting %d photos for discarded draft: %v", len(allPhotoIDs), allPhotoIDs)
+		app.deletePhotosFromStorageAndDB(ctx, allPhotoIDs)
+	}
+
 	SendJSON(w, map[string]bool{"success": true})
+}
+
+// deletePhotosFromStorageAndDB deletes photos from both GCS storage and database
+func (app *App) deletePhotosFromStorageAndDB(ctx context.Context, photoIDs []string) {
+	if len(photoIDs) == 0 {
+		return
+	}
+
+	// Get photo paths for GCS deletion
+	photoPaths, err := app.db.GetPhotoPathsByIDs(ctx, photoIDs)
+	if err != nil {
+		log.Printf("[ERROR] Failed to get photo paths: %v", err)
+	} else {
+		// Delete from GCS
+		for _, p := range photoPaths {
+			if err := app.storage.DeletePhoto(ctx, p.GCSPath, p.ThumbGCSPath); err != nil {
+				log.Printf("[ERROR] Failed to delete photo %s from GCS: %v", p.ID, err)
+			} else {
+				log.Printf("[DEBUG] Deleted photo %s from GCS", p.ID)
+			}
+		}
+	}
+
+	// Delete from database
+	if err := app.db.HardDeletePhotos(ctx, photoIDs); err != nil {
+		log.Printf("[ERROR] Failed to delete photos from database: %v", err)
+	} else {
+		log.Printf("[DEBUG] Deleted %d photos from database", len(photoIDs))
+	}
 }

@@ -4,7 +4,7 @@ import { PageDraftEditor } from "../PageDraftEditor";
 import type { PageDraft } from "../../types/photo";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { addPage, removeCluster } from "../../store/slices";
-import { savePageDraft } from "../../api/photoApi";
+import { savePageDraft, deleteDraft } from "../../api/photoApi";
 
 export function DraftsView() {
   const clusters = useAppSelector((state) => state.clusters.clusters);
@@ -20,7 +20,15 @@ export function DraftsView() {
     dispatch(removeCluster(draft.clusterId));
   };
 
-  const handleDiscardDraft = (clusterId: string) => {
+  const handleDiscardDraft = async (clusterId: string, draftId?: string) => {
+    // Delete from server if we have a draft ID
+    if (draftId) {
+      try {
+        await deleteDraft(draftId);
+      } catch (error) {
+        console.error("Failed to delete draft:", error);
+      }
+    }
     dispatch(removeCluster(clusterId));
   };
 
@@ -53,7 +61,7 @@ export function DraftsView() {
               key={cluster.id}
               cluster={cluster}
               onApprove={handleApproveDraft}
-              onDiscard={() => handleDiscardDraft(cluster.id)}
+              onDiscard={() => handleDiscardDraft(cluster.id, cluster.draftId)}
             />
           ))
         )}

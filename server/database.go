@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -301,6 +302,94 @@ func (db *Database) SoftDeletePhoto(ctx context.Context, userID, photoID string)
 		return fmt.Errorf("photo not found or already deleted")
 	}
 	return nil
+}
+
+// HardDeletePhoto permanently deletes a photo from the database
+func (db *Database) HardDeletePhoto(ctx context.Context, photoID string) error {
+	_, err := db.pool.Exec(ctx, `DELETE FROM photos WHERE id = $1`, photoID)
+	return err
+}
+
+// HardDeletePhotos permanently deletes multiple photos from the database
+func (db *Database) HardDeletePhotos(ctx context.Context, photoIDs []string) error {
+	if len(photoIDs) == 0 {
+		return nil
+	}
+	_, err := db.pool.Exec(ctx, `DELETE FROM photos WHERE id = ANY($1)`, photoIDs)
+	return err
+}
+
+// GetPhotoPathsByIDs returns the GCS paths for photos by their IDs
+func (db *Database) GetPhotoPathsByIDs(ctx context.Context, photoIDs []string) ([]struct {
+	ID           string
+	GCSPath      string
+	ThumbGCSPath string
+}, error) {
+	if len(photoIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := db.pool.Query(ctx, `
+		SELECT id, gcs_path, COALESCE(thumb_gcs_path, '') as thumb_gcs_path
+		FROM photos WHERE id = ANY($1)
+	`, photoIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []struct {
+		ID           string
+		GCSPath      string
+		ThumbGCSPath string
+	}
+	for rows.Next() {
+		var r struct {
+			ID           string
+			GCSPath      string
+			ThumbGCSPath string
+		}
+		if err := rows.Scan(&r.ID, &r.GCSPath, &r.ThumbGCSPath); err != nil {
+			return nil, err
+		}
+		results = append(results, r)
+	}
+	return results, nil
+}
+
+// GetDraftAllPhotoIDs returns all photo IDs for a draft (from cluster_photos via cluster_id)
+func (db *Database) GetDraftAllPhotoIDs(ctx context.Context, draftID string) ([]string, error) {
+	// First get the cluster_id for this draft
+	var clusterID sql.NullString
+	err := db.pool.QueryRow(ctx, `
+		SELECT cluster_id FROM page_drafts WHERE id = $1
+	`, draftID).Scan(&clusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !clusterID.Valid {
+		// No cluster associated, just return draft photos
+		return db.GetDraftPhotos(ctx, draftID)
+	}
+
+	// Get all photos from the cluster (the original set before any discards)
+	rows, err := db.pool.Query(ctx, `
+		SELECT photo_id FROM cluster_photos WHERE cluster_id = $1
+	`, clusterID.String)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var photoIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		photoIDs = append(photoIDs, id)
+	}
+	return photoIDs, nil
 }
 
 // Cluster operations
