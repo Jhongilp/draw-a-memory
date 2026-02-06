@@ -1,10 +1,10 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Calendar, Book, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Book, Trash2, Edit3, Check, X } from "lucide-react";
 import type { PageDraft, Theme } from "../../types/photo";
-import { getPhotoUrl, deleteDraft } from "../../api/photoApi";
+import { getPhotoUrl, deleteDraft, updateDraft } from "../../api/photoApi";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
-import { removePage } from "../../store/slices";
+import { removePage, updatePage } from "../../store/slices";
 
 // Cache for preloaded images to keep them in memory
 const imageCache = new Map<string, HTMLImageElement>();
@@ -106,8 +106,49 @@ export function SinglePageView() {
   const [imagesReady, setImagesReady] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editTheme, setEditTheme] = useState<Theme>("family");
+  const [isSaving, setIsSaving] = useState(false);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+
+  const themes: Theme[] = ['adventure', 'cozy', 'celebration', 'nature', 'family', 'milestone', 'playful', 'love', 'growth', 'serene'];
+
+  const startEditing = () => {
+    if (page) {
+      setEditTitle(page.title);
+      setEditDescription(page.description);
+      setEditTheme(page.theme || "family");
+      setIsEditing(true);
+    }
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!page || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      const updatedPage: PageDraft = {
+        ...page,
+        title: editTitle,
+        description: editDescription,
+        theme: editTheme,
+      };
+      await updateDraft(updatedPage);
+      dispatch(updatePage(updatedPage));
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to save page:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const currentIndex = pages.findIndex((p) => p.id === pageId);
   const page = pages[currentIndex];
@@ -203,13 +244,47 @@ export function SinglePageView() {
           <span className="text-sm font-medium text-gray-600">
             Page {currentIndex + 1} of {pages.length}
           </span>
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-            title="Delete page"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {isEditing ? (
+            <>
+              <button
+                onClick={handleSaveEdit}
+                disabled={isSaving}
+                className="p-1.5 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                title="Save changes"
+              >
+                {isSaving ? (
+                  <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin block" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+              </button>
+              <button
+                onClick={cancelEditing}
+                disabled={isSaving}
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                title="Cancel editing"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={startEditing}
+                className="p-1.5 text-gray-400 hover:text-pink-500 hover:bg-pink-50 rounded-lg transition-colors"
+                title="Edit page"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                title="Delete page"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-4">
@@ -313,12 +388,47 @@ export function SinglePageView() {
                   </div>
                 )}
 
-                <h2 className="text-2xl font-bold text-gray-800 mb-3 line-clamp-2">
-                  {page.title}
-                </h2>
-                <p className="text-base text-gray-600 leading-relaxed line-clamp-6">
-                  {page.description}
-                </p>
+                {isEditing ? (
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full text-lg font-bold bg-white rounded-lg px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                      placeholder="Page title..."
+                    />
+                    <textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      rows={4}
+                      className="w-full bg-white rounded-lg px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none text-sm"
+                      placeholder="Describe this memory..."
+                    />
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">Theme</label>
+                      <select
+                        value={editTheme}
+                        onChange={(e) => setEditTheme(e.target.value as Theme)}
+                        className="w-full bg-white rounded-lg px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-pink-300 text-sm capitalize"
+                      >
+                        {themes.map((t) => (
+                          <option key={t} value={t} className="capitalize">
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-3 line-clamp-2">
+                      {page.title}
+                    </h2>
+                    <p className="text-base text-gray-600 leading-relaxed line-clamp-6">
+                      {page.description}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </div>
