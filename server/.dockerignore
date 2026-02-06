@@ -1,0 +1,25 @@
+# Dependencies and build artifacts
+*.exe
+*.exe~
+*.test
+*.out
+
+# Development files
+.env
+.env.local
+*.env
+
+# Credentials (should be set via Cloud Run secrets)
+service-account.json
+*.json
+
+# Uploads folder
+uploads/
+
+# Documentation
+*.md
+DEPLOYMENT.md
+
+# IDE
+.vscode/
+.idea/

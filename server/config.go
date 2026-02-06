@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 // Config holds all application configuration
@@ -50,7 +51,11 @@ func LoadConfig() (*Config, error) {
 		if frontendURL == "" {
 			return nil, fmt.Errorf("FRONTEND_URL required in production")
 		}
-		config.AllowedOrigins = []string{frontendURL}
+		// Support comma-separated origins for multiple domains
+		config.AllowedOrigins = strings.Split(frontendURL, ",")
+		for i, origin := range config.AllowedOrigins {
+			config.AllowedOrigins[i] = strings.TrimSpace(origin)
+		}
 	} else {
 		config.AllowedOrigins = []string{"http://localhost:3000", "http://localhost:5173"}
 	}
