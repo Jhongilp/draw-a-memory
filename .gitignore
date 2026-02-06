@@ -26,3 +26,6 @@ server/*.exe~
 
 # Google Cloud credentials
 service-account.json
+
+# Firebase
+.firebase/
