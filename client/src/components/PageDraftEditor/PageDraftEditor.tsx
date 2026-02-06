@@ -254,7 +254,7 @@ export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEdit
       </div>
 
       {/* Content */}
-      <div className="p-6">
+      <div className="p-6 relative z-20 bg-white/90 backdrop-blur-sm">
         {isEditing ? (
           <div className="space-y-4">
             <input
