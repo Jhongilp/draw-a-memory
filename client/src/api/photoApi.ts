@@ -207,3 +207,42 @@ export function isUrlLikelyExpired(_url: string, fetchedAt: Date): boolean {
   const elapsed = Date.now() - fetchedAt.getTime();
   return elapsed > SIGNED_URL_LIFETIME_MS * 0.8; // Refresh at 80% of lifetime
 }
+
+// User settings types
+export interface UserSettings {
+  childName?: string;
+  childBirthday?: string; // ISO date string YYYY-MM-DD
+}
+
+/**
+ * Get user settings
+ */
+export async function getSettings(): Promise<UserSettings> {
+  const response = await authFetch(`${API_BASE_URL}/settings`);
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch settings');
+  }
+
+  return response.json();
+}
+
+/**
+ * Update user settings
+ */
+export async function updateSettings(settings: UserSettings): Promise<UserSettings> {
+  const response = await authFetch(`${API_BASE_URL}/settings`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(settings),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to update settings');
+  }
+
+  return response.json();
+}

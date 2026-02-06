@@ -1,13 +1,16 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { UserButton } from '@clerk/clerk-react';
-import { Baby, Upload, BookOpen, Sparkles } from 'lucide-react';
+import { Baby, Upload, BookOpen, Sparkles, Settings } from 'lucide-react';
 import { useAppSelector } from '../../store/hooks';
+import { SettingsModal } from '../SettingsModal';
 
 interface HeaderProps {
   currentPath: string;
 }
 
 export function Header({ currentPath }: HeaderProps) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const clusters = useAppSelector((state) => state.clusters.clusters);
   const pages = useAppSelector((state) => state.pages.pages);
   const isUploadView = currentPath === '/' || currentPath === '/upload';
@@ -75,7 +78,14 @@ export function Header({ currentPath }: HeaderProps) {
             </Link>
             
             {/* User Button */}
-            <div className="ml-4 pl-4 border-l border-pink-200">
+            <div className="ml-4 pl-4 border-l border-pink-200 flex items-center gap-3">
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="p-2 rounded-lg text-gray-500 hover:text-pink-600 hover:bg-pink-50 transition-colors"
+                title="Settings"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
               <UserButton 
                 afterSignOutUrl="/"
                 appearance={{
@@ -88,6 +98,8 @@ export function Header({ currentPath }: HeaderProps) {
           </nav>
         </div>
       </div>
+      
+      <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </header>
   );
 }

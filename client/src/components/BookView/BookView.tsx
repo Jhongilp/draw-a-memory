@@ -73,7 +73,6 @@ export function BookView({ pages }: BookViewProps) {
                 )}
 
                 {/* Page card */}
-                {page.backgroundPath && console.log('Background URL:', getPhotoUrl(page.backgroundPath))}
                 <div 
                   className={`${themeStyle.border} border-2 rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow relative`}
                 >
