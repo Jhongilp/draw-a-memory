@@ -155,12 +155,11 @@ export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEdit
   const [discardedPhotoIds, setDiscardedPhotoIds] = useState<Set<string>>(new Set());
 
   const themeStyle = themeColors[theme] || themeColors.family;
-  const allPhotos = cluster.photos || [];
   
   // Filter out discarded photos
   const photos = useMemo(() => 
-    allPhotos.filter(p => !discardedPhotoIds.has(p.id)), 
-    [allPhotos, discardedPhotoIds]
+    (cluster.photos || []).filter(p => !discardedPhotoIds.has(p.id)), 
+    [cluster.photos, discardedPhotoIds]
   );
   
   const dateDisplay = cluster.dateRange || cluster.date || '';
@@ -218,7 +217,7 @@ export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEdit
         {/* Dynamic photo layout */}
         <div className="relative">
           <PhotoLayout photos={photos} onRemove={handleRemovePhoto} />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
         
         {/* Age badge */}
         {ageDisplay && (
@@ -231,7 +230,7 @@ export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEdit
 
         {/* AI badge */}
         <div className="absolute top-4 right-4 z-10">
-          <span className="px-3 py-1.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-full text-sm font-medium flex items-center gap-1.5 shadow-lg">
+          <span className="px-3 py-1.5 bg-linear-to-r from-pink-500 to-purple-500 text-white rounded-full text-sm font-medium flex items-center gap-1.5 shadow-lg">
             <Sparkles className="w-4 h-4" />
             AI Draft
           </span>
@@ -344,7 +343,7 @@ export function PageDraftEditor({ cluster, onApprove, onDiscard }: PageDraftEdit
               <button
                 onClick={handleApprove}
                 disabled={photos.length === 0}
-                className="flex-1 py-3 px-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl hover:from-pink-600 hover:to-purple-600 transition-all font-medium flex items-center justify-center gap-2 shadow-lg shadow-pink-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-pink-500 disabled:hover:to-purple-500"
+                className="flex-1 py-3 px-4 bg-linear-to-r from-pink-500 to-purple-500 text-white rounded-xl hover:from-pink-600 hover:to-purple-600 transition-all font-medium flex items-center justify-center gap-2 shadow-lg shadow-pink-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-pink-500 disabled:hover:to-purple-500"
               >
                 <Check className="w-5 h-5" />
                 Add to Book

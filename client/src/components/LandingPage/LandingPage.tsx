@@ -3,16 +3,16 @@ import { Baby, Upload, Sparkles, BookOpen, ArrowRight } from 'lucide-react';
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
+    <div className="min-h-screen bg-linear-to-br from-pink-50 via-purple-50 to-blue-50">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-pink-100">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-linear-to-br from-pink-400 to-purple-500 flex items-center justify-center">
               <Baby className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold bg-linear-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
                 BabySteps AI Journal
               </h1>
             </div>
@@ -27,7 +27,7 @@ export function LandingPage() {
             </Link>
             <Link
               to="/sign-up"
-              className="px-5 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-medium text-sm shadow-lg shadow-pink-500/25 hover:shadow-pink-500/40 transition-all"
+              className="px-5 py-2 bg-linear-to-r from-pink-500 to-purple-500 text-white rounded-xl font-medium text-sm shadow-lg shadow-pink-500/25 hover:shadow-pink-500/40 transition-all"
             >
               Get Started
             </Link>
@@ -44,7 +44,7 @@ export function LandingPage() {
         
         <h2 className="text-5xl font-bold text-gray-800 mb-6 leading-tight">
           Turn Your Baby Photos Into
-          <span className="block bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+          <span className="block bg-linear-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
             Magical Memory Books
           </span>
         </h2>
@@ -57,7 +57,7 @@ export function LandingPage() {
         <div className="flex items-center justify-center gap-4">
           <Link
             to="/sign-up"
-            className="px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-2xl font-semibold text-lg shadow-xl shadow-pink-500/25 hover:shadow-pink-500/40 hover:scale-105 transition-all flex items-center gap-2"
+            className="px-8 py-4 bg-linear-to-r from-pink-500 to-purple-500 text-white rounded-2xl font-semibold text-lg shadow-xl shadow-pink-500/25 hover:shadow-pink-500/40 hover:scale-105 transition-all flex items-center gap-2"
           >
             Start Your Journal
             <ArrowRight className="w-5 h-5" />
@@ -75,7 +75,7 @@ export function LandingPage() {
       <section className="max-w-6xl mx-auto px-6 py-16">
         <div className="grid md:grid-cols-3 gap-8">
           <div className="bg-white rounded-3xl p-8 shadow-lg border border-pink-100">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-100 to-pink-200 flex items-center justify-center mb-6">
+            <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-pink-100 to-pink-200 flex items-center justify-center mb-6">
               <Upload className="w-7 h-7 text-pink-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-800 mb-3">Upload Photos</h3>
@@ -86,7 +86,7 @@ export function LandingPage() {
           </div>
 
           <div className="bg-white rounded-3xl p-8 shadow-lg border border-purple-100">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center mb-6">
+            <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-purple-100 to-purple-200 flex items-center justify-center mb-6">
               <Sparkles className="w-7 h-7 text-purple-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-800 mb-3">AI Magic</h3>
@@ -97,7 +97,7 @@ export function LandingPage() {
           </div>
 
           <div className="bg-white rounded-3xl p-8 shadow-lg border border-blue-100">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mb-6">
+            <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-blue-100 to-blue-200 flex items-center justify-center mb-6">
               <BookOpen className="w-7 h-7 text-blue-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-800 mb-3">Beautiful Book</h3>
@@ -111,7 +111,7 @@ export function LandingPage() {
 
       {/* CTA Section */}
       <section className="max-w-4xl mx-auto px-6 py-16 text-center">
-        <div className="bg-gradient-to-r from-pink-500 to-purple-500 rounded-3xl p-12 shadow-2xl">
+        <div className="bg-linear-to-r from-pink-500 to-purple-500 rounded-3xl p-12 shadow-2xl">
           <h3 className="text-3xl font-bold text-white mb-4">
             Start Preserving Memories Today
           </h3>

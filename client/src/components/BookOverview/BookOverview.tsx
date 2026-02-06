@@ -10,7 +10,7 @@ export function BookOverview() {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center py-16">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-linear-to-br from-pink-100 to-purple-100 flex items-center justify-center">
             <Book className="w-10 h-10 text-pink-400" />
           </div>
           <h3 className="text-xl font-semibold text-gray-700 mb-2">
@@ -21,7 +21,7 @@ export function BookOverview() {
           </p>
           <Link
             to="/"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-medium hover:from-pink-600 hover:to-purple-600 transition-all shadow-lg shadow-pink-500/25"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-pink-500 to-purple-500 text-white rounded-xl font-medium hover:from-pink-600 hover:to-purple-600 transition-all shadow-lg shadow-pink-500/25"
           >
             Upload Photos
             <ArrowRight className="w-4 h-4" />
@@ -41,7 +41,7 @@ export function BookOverview() {
       <div className="text-center max-w-lg">
         {/* Book cover preview */}
         <div className="relative inline-block mb-8">
-          <div className="w-64 h-80 bg-gradient-to-br from-pink-200 to-purple-200 rounded-2xl shadow-2xl overflow-hidden transform rotate-2 hover:rotate-0 transition-transform duration-300">
+          <div className="w-64 h-80 bg-linear-to-br from-pink-200 to-purple-200 rounded-2xl shadow-2xl overflow-hidden transform rotate-2 hover:rotate-0 transition-transform duration-300">
             {thumbnail ? (
               <img src={thumbnail} alt="" className="w-full h-full object-cover" />
             ) : (
@@ -49,7 +49,7 @@ export function BookOverview() {
                 <Book className="w-16 h-16 text-white/50" />
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent" />
             <div className="absolute bottom-4 left-4 right-4 text-white text-left">
               <h3 className="font-bold text-lg">Baby's First Year</h3>
               <p className="text-sm text-white/80">{pages.length} memories</p>
@@ -57,7 +57,7 @@ export function BookOverview() {
           </div>
           
           {/* Decorative badge */}
-          <div className="absolute -top-3 -right-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-full p-3 shadow-lg">
+          <div className="absolute -top-3 -right-3 bg-linear-to-r from-pink-500 to-purple-500 text-white rounded-full p-3 shadow-lg">
             <Heart className="w-5 h-5" />
           </div>
         </div>
@@ -71,7 +71,7 @@ export function BookOverview() {
 
         <Link
           to={`/book/page/${firstPage.id}`}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-medium hover:from-pink-600 hover:to-purple-600 transition-all shadow-lg shadow-pink-500/25"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-pink-500 to-purple-500 text-white rounded-xl font-medium hover:from-pink-600 hover:to-purple-600 transition-all shadow-lg shadow-pink-500/25"
         >
           Start Reading
           <ArrowRight className="w-4 h-4" />

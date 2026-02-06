@@ -19,11 +19,11 @@ export function Header({ currentPath }: HeaderProps) {
       <div className="max-w-full px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-linear-to-br from-pink-400 to-purple-500 flex items-center justify-center">
               <Baby className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold bg-linear-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
                 BabySteps AI Journal
               </h1>
               <p className="text-xs text-gray-500">Turn photos into magical memories</p>
@@ -36,7 +36,7 @@ export function Header({ currentPath }: HeaderProps) {
               to="/upload"
               className={`px-4 py-2 rounded-xl font-medium text-sm flex items-center gap-2 transition-all
                 ${isUploadView 
-                  ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/25' 
+                  ? 'bg-linear-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/25' 
                   : 'text-gray-600 hover:bg-pink-50'
                 }`}
             >
@@ -48,7 +48,7 @@ export function Header({ currentPath }: HeaderProps) {
                 to="/drafts"
                 className={`px-4 py-2 rounded-xl font-medium text-sm flex items-center gap-2 transition-all
                   ${isDraftsView 
-                    ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/25' 
+                    ? 'bg-linear-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/25' 
                     : 'text-gray-600 hover:bg-pink-50'
                   }`}
               >
@@ -61,7 +61,7 @@ export function Header({ currentPath }: HeaderProps) {
               to="/book"
               className={`px-4 py-2 rounded-xl font-medium text-sm flex items-center gap-2 transition-all
                 ${isBookView 
-                  ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/25' 
+                  ? 'bg-linear-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/25' 
                   : 'text-gray-600 hover:bg-pink-50'
                 }`}
             >

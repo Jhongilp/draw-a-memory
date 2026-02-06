@@ -98,7 +98,7 @@ export function PageSidebar({ pages, onReorder: _onReorder }: PageSidebarProps) 
               </div>
 
               {/* Thumbnail */}
-              <div className="aspect-[3/4] bg-gradient-to-br from-pink-100 to-purple-100">
+              <div className="aspect-[3/4] bg-linear-to-br from-pink-100 to-purple-100">
                 {thumbnail ? (
                   <img
                     src={thumbnail}
