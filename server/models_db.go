@@ -7,12 +7,14 @@ import (
 
 // DBUser represents a user in the database
 type DBUser struct {
-	ID        string
-	ClerkID   string
-	Email     sql.NullString
-	Name      sql.NullString
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID            string
+	ClerkID       string
+	Email         sql.NullString
+	Name          sql.NullString
+	ChildName     sql.NullString
+	ChildBirthday sql.NullTime
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // DBPhoto represents a photo in the database
@@ -79,6 +81,8 @@ type DBPageDraft struct {
 	Description       sql.NullString
 	Theme             sql.NullString
 	BackgroundGCSPath sql.NullString
+	DateRange         sql.NullString
+	AgeString         sql.NullString
 	Status            string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
@@ -86,13 +90,17 @@ type DBPageDraft struct {
 
 // ToAPIPhoto converts a DBPhoto to the API Photo format with signed URLs
 func (p *DBPhoto) ToAPIPhoto(signedURL, thumbSignedURL string) Photo {
-	return Photo{
+	photo := Photo{
 		ID:         p.ID,
 		Filename:   p.OriginalFilename,
 		Path:       signedURL, // Now a signed URL instead of a path
 		Size:       p.SizeBytes,
 		UploadedAt: p.CreatedAt,
 	}
+	if p.TakenAt.Valid {
+		photo.TakenAt = &p.TakenAt.Time
+	}
+	return photo
 }
 
 // ToAPIPageDraft converts a DBPageDraft to the API PageDraft format
@@ -105,13 +113,15 @@ func (d *DBPageDraft) ToAPIPageDraft(photoIDs []string, backgroundURL string) Pa
 		Description:    d.Description.String,
 		Theme:          d.Theme.String,
 		BackgroundPath: backgroundURL, // Now a signed URL
+		DateRange:      d.DateRange.String,
+		AgeString:      d.AgeString.String,
 		Status:         d.Status,
 		CreatedAt:      d.CreatedAt.Format(time.RFC3339),
 	}
 }
 
 // ToAPICluster converts a DBCluster to the API PhotoCluster format
-func (c *DBCluster) ToAPICluster(photoIDs []string, backgroundURL string) PhotoCluster {
+func (c *DBCluster) ToAPICluster(photoIDs []string, backgroundURL, dateRange, ageString string) PhotoCluster {
 	return PhotoCluster{
 		ID:             c.ID,
 		PhotoIds:       photoIDs,
@@ -119,6 +129,8 @@ func (c *DBCluster) ToAPICluster(photoIDs []string, backgroundURL string) PhotoC
 		Title:          c.Title.String,
 		Description:    c.Description.String,
 		Date:           c.Date.String,
+		DateRange:      dateRange,
+		AgeString:      ageString,
 		BackgroundPath: backgroundURL,
 	}
 }

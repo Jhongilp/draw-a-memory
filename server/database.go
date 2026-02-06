@@ -168,6 +168,14 @@ func (db *Database) Migrate() error {
 		`CREATE INDEX IF NOT EXISTS idx_pages_book_id ON pages(book_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_clusters_user_id ON clusters(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_page_drafts_user_id ON page_drafts(user_id)`,
+
+		// Add child settings to users table
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS child_name TEXT`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS child_birthday DATE`,
+
+		// Add date_range and age_string to page drafts
+		`ALTER TABLE page_drafts ADD COLUMN IF NOT EXISTS date_range TEXT`,
+		`ALTER TABLE page_drafts ADD COLUMN IF NOT EXISTS age_string TEXT`,
 	}
 
 	for _, migration := range migrations {
@@ -188,9 +196,9 @@ func (db *Database) GetOrCreateUser(ctx context.Context, clerkID, email, name st
 
 	// Try to get existing user
 	err := db.pool.QueryRow(ctx, `
-		SELECT id, clerk_id, email, name, created_at, updated_at 
+		SELECT id, clerk_id, email, name, child_name, child_birthday, created_at, updated_at 
 		FROM users WHERE clerk_id = $1
-	`, clerkID).Scan(&user.ID, &user.ClerkID, &user.Email, &user.Name, &user.CreatedAt, &user.UpdatedAt)
+	`, clerkID).Scan(&user.ID, &user.ClerkID, &user.Email, &user.Name, &user.ChildName, &user.ChildBirthday, &user.CreatedAt, &user.UpdatedAt)
 
 	if err == nil {
 		return &user, nil
@@ -201,14 +209,23 @@ func (db *Database) GetOrCreateUser(ctx context.Context, clerkID, email, name st
 	err = db.pool.QueryRow(ctx, `
 		INSERT INTO users (id, clerk_id, email, name)
 		VALUES ($1, $2, $3, $4)
-		RETURNING id, clerk_id, email, name, created_at, updated_at
-	`, userID, clerkID, email, name).Scan(&user.ID, &user.ClerkID, &user.Email, &user.Name, &user.CreatedAt, &user.UpdatedAt)
+		RETURNING id, clerk_id, email, name, child_name, child_birthday, created_at, updated_at
+	`, userID, clerkID, email, name).Scan(&user.ID, &user.ClerkID, &user.Email, &user.Name, &user.ChildName, &user.ChildBirthday, &user.CreatedAt, &user.UpdatedAt)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
 	return &user, nil
+}
+
+// UpdateUserSettings updates the child name and birthday for a user
+func (db *Database) UpdateUserSettings(ctx context.Context, userID string, childName string, childBirthday *time.Time) error {
+	_, err := db.pool.Exec(ctx, `
+		UPDATE users SET child_name = $2, child_birthday = $3, updated_at = NOW()
+		WHERE id = $1
+	`, userID, childName, childBirthday)
+	return err
 }
 
 // Photo operations
@@ -423,9 +440,9 @@ func (db *Database) AddPhotosToCluster(ctx context.Context, clusterID string, ph
 // CreateDraft creates a new page draft
 func (db *Database) CreateDraft(ctx context.Context, draft *DBPageDraft) error {
 	_, err := db.pool.Exec(ctx, `
-		INSERT INTO page_drafts (id, user_id, cluster_id, title, description, theme, background_gcs_path, status)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-	`, draft.ID, draft.UserID, draft.ClusterID, draft.Title, draft.Description, draft.Theme, draft.BackgroundGCSPath, draft.Status)
+		INSERT INTO page_drafts (id, user_id, cluster_id, title, description, theme, background_gcs_path, date_range, age_string, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, draft.ID, draft.UserID, draft.ClusterID, draft.Title, draft.Description, draft.Theme, draft.BackgroundGCSPath, draft.DateRange, draft.AgeString, draft.Status)
 	return err
 }
 
@@ -447,7 +464,7 @@ func (db *Database) AddPhotosToDraft(ctx context.Context, draftID string, photoI
 // GetDraftsByUser returns all drafts for a user
 func (db *Database) GetDraftsByUser(ctx context.Context, userID string) ([]DBPageDraft, error) {
 	rows, err := db.pool.Query(ctx, `
-		SELECT id, user_id, cluster_id, title, description, theme, background_gcs_path, status, created_at, updated_at
+		SELECT id, user_id, cluster_id, title, description, theme, background_gcs_path, date_range, age_string, status, created_at, updated_at
 		FROM page_drafts 
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -460,7 +477,7 @@ func (db *Database) GetDraftsByUser(ctx context.Context, userID string) ([]DBPag
 	var drafts []DBPageDraft
 	for rows.Next() {
 		var d DBPageDraft
-		err := rows.Scan(&d.ID, &d.UserID, &d.ClusterID, &d.Title, &d.Description, &d.Theme, &d.BackgroundGCSPath, &d.Status, &d.CreatedAt, &d.UpdatedAt)
+		err := rows.Scan(&d.ID, &d.UserID, &d.ClusterID, &d.Title, &d.Description, &d.Theme, &d.BackgroundGCSPath, &d.DateRange, &d.AgeString, &d.Status, &d.CreatedAt, &d.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -474,9 +491,9 @@ func (db *Database) GetDraftsByUser(ctx context.Context, userID string) ([]DBPag
 func (db *Database) GetDraftByID(ctx context.Context, draftID string) (*DBPageDraft, error) {
 	var d DBPageDraft
 	err := db.pool.QueryRow(ctx, `
-		SELECT id, user_id, cluster_id, title, description, theme, background_gcs_path, status, created_at, updated_at
+		SELECT id, user_id, cluster_id, title, description, theme, background_gcs_path, date_range, age_string, status, created_at, updated_at
 		FROM page_drafts WHERE id = $1
-	`, draftID).Scan(&d.ID, &d.UserID, &d.ClusterID, &d.Title, &d.Description, &d.Theme, &d.BackgroundGCSPath, &d.Status, &d.CreatedAt, &d.UpdatedAt)
+	`, draftID).Scan(&d.ID, &d.UserID, &d.ClusterID, &d.Title, &d.Description, &d.Theme, &d.BackgroundGCSPath, &d.DateRange, &d.AgeString, &d.Status, &d.CreatedAt, &d.UpdatedAt)
 
 	if err != nil {
 		return nil, err

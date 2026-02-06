@@ -4,11 +4,18 @@ import "time"
 
 // Photo represents an uploaded photo
 type Photo struct {
-	ID         string    `json:"id"`
-	Filename   string    `json:"filename"`
-	Path       string    `json:"path"`
-	Size       int64     `json:"size"`
-	UploadedAt time.Time `json:"uploadedAt"`
+	ID         string     `json:"id"`
+	Filename   string     `json:"filename"`
+	Path       string     `json:"path"`
+	Size       int64      `json:"size"`
+	UploadedAt time.Time  `json:"uploadedAt"`
+	TakenAt    *time.Time `json:"takenAt,omitempty"`
+}
+
+// UserSettings represents user preferences
+type UserSettings struct {
+	ChildName     string  `json:"childName,omitempty"`
+	ChildBirthday *string `json:"childBirthday,omitempty"` // ISO date string YYYY-MM-DD
 }
 
 // PhotoCluster represents a group of related photos
@@ -19,6 +26,8 @@ type PhotoCluster struct {
 	Title          string   `json:"title"`
 	Description    string   `json:"description"`
 	Date           string   `json:"date"`
+	DateRange      string   `json:"dateRange,omitempty"`
+	AgeString      string   `json:"ageString,omitempty"`
 	BackgroundPath string   `json:"backgroundPath,omitempty"`
 }
 
@@ -31,6 +40,8 @@ type PageDraft struct {
 	Description    string   `json:"description"`
 	Theme          string   `json:"theme"`
 	BackgroundPath string   `json:"backgroundPath,omitempty"`
+	DateRange      string   `json:"dateRange,omitempty"`
+	AgeString      string   `json:"ageString,omitempty"`
 	Status         string   `json:"status"` // "draft" | "approved" | "rejected"
 	CreatedAt      string   `json:"createdAt"`
 }

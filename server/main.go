@@ -93,6 +93,9 @@ func main() {
 	// Draft endpoints (auth required)
 	mux.HandleFunc("/api/drafts/", cors(auth.Middleware(app.HandleDrafts)))
 
+	// Settings endpoints (auth required)
+	mux.HandleFunc("/api/settings", cors(auth.Middleware(app.HandleSettings)))
+
 	// Create server
 	server := &http.Server{
 		Addr:         ":" + config.Port,

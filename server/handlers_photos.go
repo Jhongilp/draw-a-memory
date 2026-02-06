@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -88,7 +89,20 @@ func (app *App) HandleUpload(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error opening file %s: %v", fileHeader.Filename, err)
 			continue
 		}
-		defer file.Close()
+
+		// Read file data into memory for EXIF extraction and upload
+		fileData, err := ReadFileData(file)
+		file.Close()
+		if err != nil {
+			log.Printf("Error reading file %s: %v", fileHeader.Filename, err)
+			continue
+		}
+
+		// Extract EXIF date from photo
+		takenAt := ExtractPhotoDate(fileData)
+		if takenAt != nil {
+			log.Printf("Extracted photo date for %s: %v", fileHeader.Filename, takenAt)
+		}
 
 		// Determine content type
 		contentType := fileHeader.Header.Get("Content-Type")
@@ -96,8 +110,8 @@ func (app *App) HandleUpload(w http.ResponseWriter, r *http.Request) {
 			contentType = "image/jpeg" // Default fallback
 		}
 
-		// Upload to GCS
-		gcsPath, thumbPath, sizeBytes, err := app.storage.UploadPhoto(ctx, dbUser.ID, file, fileHeader.Filename, contentType)
+		// Upload to GCS using bytes reader
+		gcsPath, thumbPath, sizeBytes, err := app.storage.UploadPhoto(ctx, dbUser.ID, bytes.NewReader(fileData), fileHeader.Filename, contentType)
 		if err != nil {
 			log.Printf("Error uploading file %s: %v", fileHeader.Filename, err)
 			continue
@@ -118,6 +132,11 @@ func (app *App) HandleUpload(w http.ResponseWriter, r *http.Request) {
 			ContentType:      contentType,
 		}
 
+		// Set taken_at if we extracted it from EXIF
+		if takenAt != nil {
+			dbPhoto.TakenAt = sql.NullTime{Time: *takenAt, Valid: true}
+		}
+
 		if err := app.db.CreatePhoto(ctx, dbPhoto); err != nil {
 			log.Printf("Error saving photo to database: %v", err)
 			// Try to clean up GCS files
@@ -134,6 +153,7 @@ func (app *App) HandleUpload(w http.ResponseWriter, r *http.Request) {
 			Path:       signedURL,
 			Size:       sizeBytes,
 			UploadedAt: time.Now(),
+			TakenAt:    takenAt,
 		}
 		uploadedPhotos = append(uploadedPhotos, photo)
 		log.Printf("Uploaded: %s -> %s (%d bytes)", fileHeader.Filename, gcsPath, sizeBytes)
@@ -400,9 +420,20 @@ func (app *App) HandleClusterPhotos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Create a map of photo ID to photo for date lookups
+	photoMap := make(map[string]*DBPhoto)
+	for i := range dbPhotos {
+		photoMap[dbPhotos[i].ID] = &dbPhotos[i]
+	}
+
 	// Generate background images and create drafts
 	var pageDrafts []PageDraft
 	for i, cluster := range clusters {
+		// Calculate date range and age string from photo dates
+		dateRange, ageString := calculateClusterDatesAndAge(cluster.PhotoIds, photoMap, dbUser.ChildBirthday)
+		clusters[i].DateRange = dateRange
+		clusters[i].AgeString = ageString
+
 		// Save cluster to database
 		dbCluster := &DBCluster{
 			ID:          cluster.ID,
@@ -446,6 +477,8 @@ func (app *App) HandleClusterPhotos(w http.ResponseWriter, r *http.Request) {
 			Description:       sql.NullString{String: cluster.Description, Valid: cluster.Description != ""},
 			Theme:             sql.NullString{String: cluster.Theme, Valid: cluster.Theme != ""},
 			BackgroundGCSPath: sql.NullString{String: bgGCSPath, Valid: bgGCSPath != ""},
+			DateRange:         sql.NullString{String: dateRange, Valid: dateRange != ""},
+			AgeString:         sql.NullString{String: ageString, Valid: ageString != ""},
 			Status:            "draft",
 		}
 
@@ -465,6 +498,8 @@ func (app *App) HandleClusterPhotos(w http.ResponseWriter, r *http.Request) {
 			Description:    cluster.Description,
 			Theme:          cluster.Theme,
 			BackgroundPath: backgroundURL,
+			DateRange:      dateRange,
+			AgeString:      ageString,
 			Status:         "draft",
 			CreatedAt:      time.Now().Format(time.RFC3339),
 		}
@@ -477,4 +512,58 @@ func (app *App) HandleClusterPhotos(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SendJSON(w, response)
+}
+
+// calculateClusterDatesAndAge calculates date range and age string for a cluster
+func calculateClusterDatesAndAge(photoIds []string, photoMap map[string]*DBPhoto, childBirthday sql.NullTime) (dateRange, ageString string) {
+	var minDate, maxDate time.Time
+	hasValidDate := false
+
+	for _, id := range photoIds {
+		photo, ok := photoMap[id]
+		if !ok || !photo.TakenAt.Valid {
+			continue
+		}
+
+		if !hasValidDate {
+			minDate = photo.TakenAt.Time
+			maxDate = photo.TakenAt.Time
+			hasValidDate = true
+		} else {
+			if photo.TakenAt.Time.Before(minDate) {
+				minDate = photo.TakenAt.Time
+			}
+			if photo.TakenAt.Time.After(maxDate) {
+				maxDate = photo.TakenAt.Time
+			}
+		}
+	}
+
+	if !hasValidDate {
+		return "", ""
+	}
+
+	// Format date range
+	if minDate.Year() == maxDate.Year() && minDate.Month() == maxDate.Month() && minDate.Day() == maxDate.Day() {
+		// Same day
+		dateRange = minDate.Format("January 2, 2006")
+	} else if minDate.Year() == maxDate.Year() && minDate.Month() == maxDate.Month() {
+		// Same month
+		dateRange = fmt.Sprintf("%s %d-%d, %d", minDate.Month().String(), minDate.Day(), maxDate.Day(), minDate.Year())
+	} else if minDate.Year() == maxDate.Year() {
+		// Same year, different months
+		dateRange = fmt.Sprintf("%s - %s", minDate.Format("Jan 2"), maxDate.Format("Jan 2, 2006"))
+	} else {
+		// Different years
+		dateRange = fmt.Sprintf("%s - %s", minDate.Format("Jan 2, 2006"), maxDate.Format("Jan 2, 2006"))
+	}
+
+	// Calculate age string if we have a birthday
+	if childBirthday.Valid {
+		// Use the average date for age calculation
+		avgTime := minDate.Add(maxDate.Sub(minDate) / 2)
+		ageString = CalculateAgeString(childBirthday.Time, avgTime)
+	}
+
+	return dateRange, ageString
 }
