@@ -169,8 +169,17 @@ func (app *App) handleUpdateDraft(w http.ResponseWriter, r *http.Request, parts 
 			app.deletePhotosFromStorageAndDB(ctx, discardedPhotoIDs)
 		}
 
-		// Update draft status
+		// Update draft with user's edits and set status to approved
 		existingDraft.Status = "approved"
+		if approveReq.Title != "" {
+			existingDraft.Title = sql.NullString{String: approveReq.Title, Valid: true}
+		}
+		if approveReq.Description != "" {
+			existingDraft.Description = sql.NullString{String: approveReq.Description, Valid: true}
+		}
+		if approveReq.Theme != "" {
+			existingDraft.Theme = sql.NullString{String: approveReq.Theme, Valid: true}
+		}
 		if err := app.db.UpdateDraft(ctx, existingDraft); err != nil {
 			log.Printf("[ERROR] Failed to approve draft %s: %v", draftID, err)
 			SendError(w, "Failed to approve draft", http.StatusInternalServerError)
